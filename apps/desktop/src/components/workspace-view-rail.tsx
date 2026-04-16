@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Bot, TerminalSquare, DraftingCompass } from "lucide-react";
+import { Bot, DraftingCompass, FolderTree, TerminalSquare } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { WorkspaceView } from "@/lib/types";
@@ -8,6 +8,7 @@ import { WORKSPACE_VIEWS } from "@/lib/task-ui";
 
 const viewIcons: Record<WorkspaceView, ReactNode> = {
   agent: <Bot className="h-4 w-4" />,
+  files: <FolderTree className="h-4 w-4" />,
   terminal: <TerminalSquare className="h-4 w-4" />,
   review: <DraftingCompass className="h-4 w-4" />,
 };

@@ -157,6 +157,7 @@ impl RunStatus {
 pub enum WorkspaceView {
     #[default]
     Agent,
+    Files,
     Terminal,
     Review,
 }
@@ -165,6 +166,7 @@ impl WorkspaceView {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Agent => "agent",
+            Self::Files => "files",
             Self::Terminal => "terminal",
             Self::Review => "review",
         }
@@ -173,6 +175,7 @@ impl WorkspaceView {
     pub fn from_str(value: &str) -> anyhow::Result<Self> {
         match value {
             "agent" => Ok(Self::Agent),
+            "files" => Ok(Self::Files),
             "terminal" => Ok(Self::Terminal),
             "review" => Ok(Self::Review),
             "run" => Ok(Self::Agent),
