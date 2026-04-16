@@ -9,15 +9,15 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
 
   return (
-    <div className={`fade-rise flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+    <div className={`fade-rise flex gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}>
       <div
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
           isUser
-            ? "border-emerald-300/35 bg-emerald-300/[0.1] text-emerald-50"
-            : "border-border/70 bg-white/[0.03]"
+            ? "bg-chart-2/15 text-chart-2 ring-1 ring-chart-2/20"
+            : "bg-muted/60 text-muted-foreground ring-1 ring-border/30"
         }`}
       >
-        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+        {isUser ? <User className="h-3 w-3" /> : <Bot className="h-3 w-3" />}
       </div>
 
       <div className={`flex-1 min-w-0 ${isUser ? "text-right" : ""}`}>
@@ -35,13 +35,13 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           return (
             <div
               key={i}
-              className={`inline-block max-w-full rounded-md border px-3 py-2 text-left text-sm ${
+              className={`inline-block max-w-full rounded-lg px-3 py-2 text-left text-[13px] leading-relaxed ${
                 isUser
-                  ? "border-emerald-300/35 bg-emerald-300/[0.1] text-emerald-50"
-                  : "border-border/60 bg-white/[0.03]"
+                  ? "bg-primary/15 text-foreground ring-1 ring-primary/15"
+                  : "bg-muted/40 text-foreground ring-1 ring-border/20"
               }`}
             >
-              <div className="prose prose-sm prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_code]:rounded [&_code]:bg-muted/60 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[12px] [&_pre]:rounded-lg [&_pre]:bg-muted/60 [&_pre]:ring-1 [&_pre]:ring-border/20">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {segment.text}
                 </ReactMarkdown>

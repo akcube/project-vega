@@ -116,7 +116,7 @@ impl WorkflowState {
         match self {
             Self::Todo => "Todo",
             Self::InProgress => "In Progress",
-            Self::Blocked => "Blocked",
+            Self::Blocked => "In Review",
             Self::Completed => "Completed",
         }
     }

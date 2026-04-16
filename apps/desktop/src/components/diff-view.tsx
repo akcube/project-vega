@@ -9,21 +9,22 @@ export function DiffView({ path, oldText, newText }: DiffViewProps) {
   const newLines = (newText ?? "").split("\n");
 
   return (
-    <div className="my-2 overflow-hidden rounded-md border border-border/60 bg-white/[0.02] text-xs font-mono">
-      <div className="truncate border-b border-border/60 px-3 py-2 text-muted-foreground">
-        {path}
+    <div className="my-1.5 overflow-hidden rounded-lg border border-border/20 bg-muted/20 font-mono text-[11px]">
+      <div className="flex items-center gap-2 border-b border-border/20 px-3 py-1.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-chart-3" />
+        <span className="truncate text-muted-foreground">{path}</span>
       </div>
       <div className="max-h-80 overflow-x-auto overflow-y-auto">
         {oldText !== null &&
           oldLines.map((line, i) => (
-            <div key={`old-${i}`} className="whitespace-pre bg-rose-400/[0.08] px-3 py-1 text-rose-200">
-              <span className="mr-2 select-none text-muted-foreground/50">-</span>
+            <div key={`old-${i}`} className="whitespace-pre bg-destructive/[0.06] px-3 py-0.5 text-destructive/80">
+              <span className="mr-2 select-none text-muted-foreground/30">-</span>
               {line}
             </div>
           ))}
         {newLines.map((line, i) => (
-          <div key={`new-${i}`} className="whitespace-pre bg-emerald-400/[0.08] px-3 py-1 text-emerald-200">
-            <span className="mr-2 select-none text-muted-foreground/50">+</span>
+          <div key={`new-${i}`} className="whitespace-pre bg-chart-2/[0.06] px-3 py-0.5 text-chart-2/80">
+            <span className="mr-2 select-none text-muted-foreground/30">+</span>
             {line}
           </div>
         ))}

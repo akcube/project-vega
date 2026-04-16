@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ProjectBoardViewModel, Provider, ProjectResource } from "@/lib/types";
-import { defaultModelForProvider, repoSelectionMode } from "@/lib/task-ui";
+import { defaultModelForProvider, repoSelectionMode, PROVIDER_AVAILABLE_MODELS } from "@/lib/task-ui";
 import { useTaskStore } from "@/stores/task-store";
 
 interface CreateTaskDialogProps {
@@ -32,11 +32,10 @@ export function NewTaskDialog({ projectBoard }: CreateTaskDialogProps) {
 
   const repositories = projectBoard?.repositories ?? [];
   const selectionMode = repoSelectionMode(repositories);
+  const availableModels = PROVIDER_AVAILABLE_MODELS[provider];
 
   const sourceRepo = useMemo<ProjectResource | null>(() => {
-    if (repositories.length === 1) {
-      return repositories[0];
-    }
+    if (repositories.length === 1) return repositories[0];
     return repositories.find((repository) => repository.id === sourceRepoResourceId) ?? null;
   }, [repositories, sourceRepoResourceId]);
 
@@ -75,33 +74,35 @@ export function NewTaskDialog({ projectBoard }: CreateTaskDialogProps) {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="rounded-md border border-border/70 bg-white/[0.03]">
-          <Plus className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="sm" className="rounded-lg border border-border/40 bg-muted/30 hover:bg-muted/60">
+          <Plus className="h-3 w-3" />
           New task
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl border-border/60 bg-[#1d2128] text-foreground shadow-2xl">
+      <DialogContent className="max-w-lg border-border/30 bg-card text-foreground shadow-2xl">
         <DialogHeader>
-          <DialogTitle>New task</DialogTitle>
-          <DialogDescription>
-            Tasks always land in the selected project and spawn a worktree from one of its repos.
+          <DialogTitle className="text-sm font-semibold">New task</DialogTitle>
+          <DialogDescription className="text-xs">
+            Tasks spawn a worktree from one of the project's repos.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <Input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Task title"
             autoFocus
-            className="bg-white/[0.03]"
+            className="bg-muted/30 text-sm"
           />
+
+          {/* Provider */}
           <Select value={provider} onValueChange={(value) => {
             const nextProvider = value as Provider;
             setProvider(nextProvider);
             setModel(defaultModelForProvider(nextProvider));
           }}>
-            <SelectTrigger className="bg-white/[0.03]">
+            <SelectTrigger className="bg-muted/30 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -109,19 +110,27 @@ export function NewTaskDialog({ projectBoard }: CreateTaskDialogProps) {
               <SelectItem value="Claude">Claude</SelectItem>
             </SelectContent>
           </Select>
-          <Input
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            placeholder="Model"
-            className="bg-white/[0.03]"
-          />
+
+          {/* Model dropdown */}
+          <Select value={model} onValueChange={setModel}>
+            <SelectTrigger className="bg-muted/30 text-sm font-mono">
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((m) => (
+                <SelectItem key={m} value={m} className="font-mono text-xs">
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {selectionMode === "manual" ? (
             <Select
               value={sourceRepoResourceId ?? undefined}
               onValueChange={setSourceRepoResourceId}
             >
-              <SelectTrigger className="bg-white/[0.03]">
+              <SelectTrigger className="bg-muted/30 text-sm">
                 <SelectValue placeholder="Select repo" />
               </SelectTrigger>
               <SelectContent>
@@ -133,7 +142,7 @@ export function NewTaskDialog({ projectBoard }: CreateTaskDialogProps) {
               </SelectContent>
             </Select>
           ) : (
-            <div className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-2 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-border/30 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
               {sourceRepo ? `Auto-selected ${sourceRepo.label}` : "This project has one repository."}
             </div>
           )}
@@ -142,6 +151,7 @@ export function NewTaskDialog({ projectBoard }: CreateTaskDialogProps) {
             onClick={handleCreate}
             disabled={!projectBoard || !title.trim() || model.trim().length === 0 || (selectionMode === "manual" && !sourceRepoResourceId)}
             className="w-full"
+            size="sm"
           >
             Create task
           </Button>

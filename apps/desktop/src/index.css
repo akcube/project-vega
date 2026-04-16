@@ -6,9 +6,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular,
+  --font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular,
     Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,24 +46,26 @@
   --color-sidebar: var(--sidebar);
 }
 
+/* ── True One Dark Pro palette ─────────────────────────────────── */
+
 :root {
-  --background: #11161d;
-  --foreground: #d7dce5;
-  --card: #171c23;
-  --card-foreground: #d7dce5;
-  --popover: #171c23;
-  --popover-foreground: #d7dce5;
+  --background: #282c34;
+  --foreground: #abb2bf;
+  --card: #21252b;
+  --card-foreground: #abb2bf;
+  --popover: #21252b;
+  --popover-foreground: #abb2bf;
   --primary: #61afef;
-  --primary-foreground: #0f1319;
-  --secondary: #1e242d;
-  --secondary-foreground: #d7dce5;
-  --muted: #1b2129;
-  --muted-foreground: #8c93a3;
-  --accent: #232a34;
-  --accent-foreground: #d7dce5;
+  --primary-foreground: #282c34;
+  --secondary: #2c313a;
+  --secondary-foreground: #abb2bf;
+  --muted: #1e2127;
+  --muted-foreground: #5c6370;
+  --accent: #2c313a;
+  --accent-foreground: #abb2bf;
   --destructive: #e06c75;
-  --border: #2b313c;
-  --input: #222933;
+  --border: #3e4451;
+  --input: #1e2127;
   --ring: #61afef;
   --chart-1: #61afef;
   --chart-2: #98c379;
@@ -71,50 +73,89 @@
   --chart-4: #c678dd;
   --chart-5: #56b6c2;
   --radius: 0.5rem;
-  --sidebar-background: #171c23;
-  --sidebar-foreground: #d7dce5;
+  --sidebar-background: #21252b;
+  --sidebar-foreground: #abb2bf;
   --sidebar-primary: #61afef;
-  --sidebar-primary-foreground: #0f1319;
-  --sidebar-accent: #232a34;
-  --sidebar-accent-foreground: #d7dce5;
-  --sidebar-border: #2b313c;
+  --sidebar-primary-foreground: #282c34;
+  --sidebar-accent: #2c313a;
+  --sidebar-accent-foreground: #abb2bf;
+  --sidebar-border: #3e4451;
   --sidebar-ring: #61afef;
-  --sidebar: #171c23;
+  --sidebar: #21252b;
 }
 
+/* ── Creamy warm light palette ──────────────────────────────────── */
+
+.light {
+  --background: #faf6f0;
+  --foreground: #3d3329;
+  --card: #f3ede4;
+  --card-foreground: #3d3329;
+  --popover: #f3ede4;
+  --popover-foreground: #3d3329;
+  --primary: #c8872e;
+  --primary-foreground: #faf6f0;
+  --secondary: #ede6db;
+  --secondary-foreground: #3d3329;
+  --muted: #f0e9de;
+  --muted-foreground: #8a7d6b;
+  --accent: #ede6db;
+  --accent-foreground: #3d3329;
+  --destructive: #c44040;
+  --border: #ddd5c8;
+  --input: #f0e9de;
+  --ring: #c8872e;
+  --chart-1: #c8872e;
+  --chart-2: #5d8a3e;
+  --chart-3: #b58a2e;
+  --chart-4: #8a5db5;
+  --chart-5: #3e8a8a;
+  --sidebar-background: #f3ede4;
+  --sidebar-foreground: #3d3329;
+  --sidebar-primary: #c8872e;
+  --sidebar-primary-foreground: #faf6f0;
+  --sidebar-accent: #ede6db;
+  --sidebar-accent-foreground: #3d3329;
+  --sidebar-border: #ddd5c8;
+  --sidebar-ring: #c8872e;
+  --sidebar: #f3ede4;
+}
+
+/* ── One Dark Pro dark palette ─────────────────────────────────── */
+
 .dark {
-  --background: #11161d;
-  --foreground: #d7dce5;
-  --card: #171c23;
-  --card-foreground: #d7dce5;
-  --popover: #171c23;
-  --popover-foreground: #d7dce5;
+  --background: #282c34;
+  --foreground: #abb2bf;
+  --card: #21252b;
+  --card-foreground: #abb2bf;
+  --popover: #21252b;
+  --popover-foreground: #abb2bf;
   --primary: #61afef;
-  --primary-foreground: #0f1319;
-  --secondary: #1e242d;
-  --secondary-foreground: #d7dce5;
-  --muted: #1b2129;
-  --muted-foreground: #8c93a3;
-  --accent: #232a34;
-  --accent-foreground: #d7dce5;
+  --primary-foreground: #282c34;
+  --secondary: #2c313a;
+  --secondary-foreground: #abb2bf;
+  --muted: #1e2127;
+  --muted-foreground: #5c6370;
+  --accent: #2c313a;
+  --accent-foreground: #abb2bf;
   --destructive: #e06c75;
-  --border: #2b313c;
-  --input: #222933;
+  --border: #3e4451;
+  --input: #1e2127;
   --ring: #61afef;
   --chart-1: #61afef;
   --chart-2: #98c379;
   --chart-3: #e5c07b;
   --chart-4: #c678dd;
   --chart-5: #56b6c2;
-  --sidebar-background: #171c23;
-  --sidebar-foreground: #d7dce5;
+  --sidebar-background: #21252b;
+  --sidebar-foreground: #abb2bf;
   --sidebar-primary: #61afef;
-  --sidebar-primary-foreground: #0f1319;
-  --sidebar-accent: #232a34;
-  --sidebar-accent-foreground: #d7dce5;
-  --sidebar-border: #2b313c;
+  --sidebar-primary-foreground: #282c34;
+  --sidebar-accent: #2c313a;
+  --sidebar-accent-foreground: #abb2bf;
+  --sidebar-border: #3e4451;
   --sidebar-ring: #61afef;
-  --sidebar: #171c23;
+  --sidebar: #21252b;
 }
 
 @layer base {
@@ -125,7 +166,9 @@
     @apply bg-background text-foreground;
     margin: 0;
     overflow: hidden;
-    letter-spacing: 0;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   #root {
@@ -139,33 +182,76 @@
   img {
     display: block;
   }
+
+  /* Refined scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3e4451;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4b5263;
+  }
+
+  .light ::-webkit-scrollbar-thumb {
+    background: #d0c8bb;
+  }
+  .light ::-webkit-scrollbar-thumb:hover {
+    background: #bfb5a5;
+  }
 }
 
+/* ── Keyframes ─────────────────────────────────────────────────── */
+
 @keyframes shimmer-sweep {
-  0% {
-    transform: translateX(-140%);
-  }
-  100% {
-    transform: translateX(140%);
-  }
+  0% { transform: translateX(-140%); }
+  100% { transform: translateX(140%); }
 }
 
 @keyframes fade-rise {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(97, 175, 239, 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(97, 175, 239, 0); }
+}
+
+@keyframes spin-smooth {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+@keyframes slide-in-right {
+  0% { opacity: 0; transform: translateX(8px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes subtle-breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
 
 @layer utilities {
   .shimmer-overlay {
     position: absolute;
     inset: 0;
     overflow: hidden;
+    pointer-events: none;
   }
 
   .shimmer-overlay::after {
@@ -175,7 +261,7 @@
     background: linear-gradient(
       115deg,
       transparent 20%,
-      rgba(255, 255, 255, 0.14) 46%,
+      rgba(255, 255, 255, 0.06) 46%,
       transparent 72%
     );
     animation: shimmer-sweep 3.2s ease-in-out infinite;
@@ -193,8 +279,8 @@
     background: linear-gradient(
       110deg,
       transparent 10%,
-      rgba(110, 231, 183, 0.08) 35%,
-      rgba(255, 255, 255, 0.08) 50%,
+      color-mix(in srgb, var(--chart-2) 8%, transparent) 35%,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 50%,
       transparent 72%
     );
     animation: shimmer-sweep 2.8s ease-in-out infinite;
@@ -202,6 +288,41 @@
   }
 
   .fade-rise {
-    animation: fade-rise 220ms ease-out;
+    animation: fade-rise 200ms ease-out;
+  }
+
+  .slide-in {
+    animation: slide-in-right 200ms ease-out;
+  }
+
+  .dot-pulse {
+    animation: dot-pulse 2s ease-in-out infinite;
+  }
+
+  /* Glass surface effect */
+  .glass-surface {
+    background: color-mix(in srgb, var(--card) 85%, transparent);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  }
+
+  /* Subtle inset shadow for depth */
+  .inset-highlight {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.03),
+      0 1px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  /* Active glow ring */
+  .glow-ring-primary {
+    box-shadow:
+      0 0 0 1px rgba(97, 175, 239, 0.3),
+      0 0 8px -2px rgba(97, 175, 239, 0.15);
+  }
+
+  .glow-ring-green {
+    box-shadow:
+      0 0 0 1px rgba(152, 195, 121, 0.3),
+      0 0 8px -2px rgba(152, 195, 121, 0.15);
   }
 }

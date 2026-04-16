@@ -9,8 +9,8 @@ import {
 
 describe("task ui helpers", () => {
   it("chooses a default model per provider", () => {
-    expect(defaultModelForProvider("Codex")).toBe("gpt-5-codex");
-    expect(defaultModelForProvider("Claude")).toBe("claude-sonnet-4-5");
+    expect(defaultModelForProvider("Codex")).toBe("gpt-5.4");
+    expect(defaultModelForProvider("Claude")).toBe("claude-sonnet-4-6");
   });
 
   it("switches repo selection mode by repo count", () => {
@@ -21,6 +21,6 @@ describe("task ui helpers", () => {
 
   it("keeps the workflow state ordering stable", () => {
     expect(WORKFLOW_STATES).toEqual(["todo", "in_progress", "blocked", "completed"]);
-    expect(stateLabel("blocked")).toBe("Blocked");
+    expect(stateLabel("blocked")).toBe("In Review");
   });
 });

@@ -28,7 +28,7 @@ export const WORKFLOW_STATE_META: Record<
     panelTone: "bg-emerald-500/8",
   },
   blocked: {
-    label: "Blocked",
+    label: "In Review",
     tone: "border-amber-500/35 bg-amber-500/12 text-amber-100",
     panelTone: "bg-amber-500/8",
   },
@@ -40,8 +40,13 @@ export const WORKFLOW_STATE_META: Record<
 };
 
 export const PROVIDER_DEFAULT_MODELS: Record<Provider, string> = {
-  Codex: "gpt-5-codex",
-  Claude: "claude-sonnet-4-5",
+  Codex: "gpt-5.4",
+  Claude: "claude-sonnet-4-6",
+};
+
+export const PROVIDER_AVAILABLE_MODELS: Record<Provider, string[]> = {
+  Codex: ["gpt-5.4", "gpt-5.3-codex", "gpt-5.2-codex", "gpt-5.4-mini", "gpt-5.3-codex-spark"],
+  Claude: ["claude-sonnet-4-6", "claude-opus-4-6", "claude-sonnet-4-5", "claude-haiku-4-5-20251001"],
 };
 
 export function defaultModelForProvider(provider: Provider) {

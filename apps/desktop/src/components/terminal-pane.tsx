@@ -7,11 +7,11 @@ import type { TaskWorkspaceViewModel, TerminalEvent } from "@/lib/types";
 import { useTaskStore } from "@/stores/task-store";
 
 const ONE_DARK_THEME = {
-  background: "#11161d",
+  background: "#282c34",
   foreground: "#abb2bf",
   cursor: "#61afef",
-  cursorAccent: "#11161d",
-  selectionBackground: "rgba(97, 175, 239, 0.24)",
+  cursorAccent: "#282c34",
+  selectionBackground: "rgba(97, 175, 239, 0.2)",
   black: "#282c34",
   red: "#e06c75",
   green: "#98c379",
@@ -19,7 +19,7 @@ const ONE_DARK_THEME = {
   blue: "#61afef",
   magenta: "#c678dd",
   cyan: "#56b6c2",
-  white: "#dcdfe4",
+  white: "#abb2bf",
   brightBlack: "#5c6370",
   brightRed: "#e06c75",
   brightGreen: "#98c379",
@@ -37,7 +37,7 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeFrameRef = useRef<number | null>(null);
   const delayedFitRef = useRef<number | null>(null);
-  const [status, setStatus] = useState("Connecting terminal");
+  const [status, setStatus] = useState("Connecting");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,10 +48,12 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
     const term = new Terminal({
       theme: ONE_DARK_THEME,
       fontFamily:
-        'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        '"JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       fontSize: 13,
-      lineHeight: 1.3,
+      lineHeight: 1.35,
+      letterSpacing: 0,
       cursorBlink: true,
+      cursorStyle: "bar",
       allowTransparency: false,
       scrollback: 5000,
     });
@@ -65,12 +67,8 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
     const fitAndResize = () => {
       const width = container.clientWidth;
       const height = container.clientHeight;
-      if (width <= 0 || height <= 0) {
-        return;
-      }
-      if (width === lastMeasuredWidth && height === lastMeasuredHeight) {
-        return;
-      }
+      if (width <= 0 || height <= 0) return;
+      if (width === lastMeasuredWidth && height === lastMeasuredHeight) return;
       lastMeasuredWidth = width;
       lastMeasuredHeight = height;
       fitAddon.fit();
@@ -82,14 +80,10 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
     };
 
     const scheduleFit = () => {
-      if (resizeFrameRef.current !== null) {
-        return;
-      }
+      if (resizeFrameRef.current !== null) return;
       resizeFrameRef.current = requestAnimationFrame(() => {
         resizeFrameRef.current = null;
-        if (!disposed) {
-          fitAndResize();
-        }
+        if (!disposed) fitAndResize();
       });
     };
 
@@ -104,7 +98,7 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
 
     const boot = async () => {
       try {
-        setStatus("Connecting terminal");
+        setStatus("Connecting");
         setError(null);
         const snapshot = await attachTerminal(
           workspace.task.id,
@@ -113,11 +107,9 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
           writeEvent,
         );
         if (disposed) return;
-        if (snapshot.output) {
-          term.write(snapshot.output);
-        }
+        if (snapshot.output) term.write(snapshot.output);
         scheduleFit();
-        setStatus(`Shell at ${workspace.task.worktreePath}`);
+        setStatus(workspace.task.worktreePath);
       } catch (nextError) {
         if (!disposed) {
           setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -130,17 +122,13 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
     });
 
     const handleWindowResize = () => {
-      if (!disposed) {
-        scheduleFit();
-      }
+      if (!disposed) scheduleFit();
     };
 
     window.addEventListener("resize", handleWindowResize);
     scheduleFit();
     delayedFitRef.current = window.setTimeout(() => {
-      if (!disposed) {
-        scheduleFit();
-      }
+      if (!disposed) scheduleFit();
     }, 120);
 
     void boot();
@@ -162,17 +150,27 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
   }, [attachTerminal, resizeTerminal, workspace.task.id, workspace.task.worktreePath, writeTerminal]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-border/60 px-5 py-3 text-xs text-muted-foreground">
-        {error ?? status}
+    <div className="flex h-full min-h-0 flex-col bg-muted">
+      {/* Minimal status bar */}
+      <div className="flex h-7 items-center border-b border-border/40 px-3">
+        <span className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
+          {error ? (
+            <span className="text-destructive">{error}</span>
+          ) : (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-chart-2" />
+              {status}
+            </>
+          )}
+        </span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         {error ? (
-          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
+          <div className="flex h-full items-center justify-center px-6 text-center text-xs text-muted-foreground">
             {error}
           </div>
         ) : (
-          <div ref={containerRef} className="h-full w-full px-4 py-4" />
+          <div ref={containerRef} className="h-full w-full px-2 py-1" />
         )}
       </div>
     </div>

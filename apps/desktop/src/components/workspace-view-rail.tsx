@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Bot, TerminalSquare, DraftingCompass } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { WorkspaceView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_VIEWS } from "@/lib/task-ui";
@@ -19,23 +19,29 @@ interface WorkspaceViewRailProps {
 
 export function WorkspaceViewRail({ value, onChange }: WorkspaceViewRailProps) {
   return (
-    <div className="flex h-full w-[92px] flex-col gap-2 border-r border-border/60 bg-[#171b21] p-3">
+    <div className="flex h-full w-11 flex-col items-center gap-1 border-r border-border/40 bg-card py-2">
       {WORKSPACE_VIEWS.map((view) => {
         const active = view.id === value;
         return (
-          <Button
-            key={view.id}
-            type="button"
-            variant={active ? "default" : "ghost"}
-            className={cn(
-              "h-auto flex-col items-center gap-1 rounded-md px-2 py-3 text-xs",
-              active && "live-pane",
-            )}
-            onClick={() => onChange(view.id)}
-          >
-            {viewIcons[view.id]}
-            <span>{view.label}</span>
-          </Button>
+          <Tooltip key={view.id}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => onChange(view.id)}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150",
+                  active
+                    ? "bg-primary/15 text-primary glow-ring-primary"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                )}
+              >
+                {viewIcons[view.id]}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">
+              {view.label}
+            </TooltipContent>
+          </Tooltip>
         );
       })}
     </div>

@@ -196,6 +196,7 @@ export const useTaskStore = create<AppState>((set, get) => ({
     await invoke("update_task_workflow_state", { taskId, workflowState });
     await get().refreshProjectBoard();
     await get().loadActiveWorkspaces();
+    await get().refreshWorkspace();
   },
 
   deleteTask: async (taskId) => {

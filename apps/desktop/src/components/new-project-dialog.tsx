@@ -113,59 +113,59 @@ export function NewProjectDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="ghost" className="rounded-md border border-border/70 bg-white/[0.03]">
+        <Button size="sm" variant="ghost" className="w-full justify-start gap-2 rounded-lg border border-dashed border-border/40 bg-muted/20 text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-foreground">
           <Plus className="h-3.5 w-3.5" />
           New project
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl border-border/60 bg-[#1d2128] text-foreground shadow-2xl">
+      <DialogContent className="max-w-3xl border-border/30 bg-card text-foreground shadow-2xl">
         <DialogHeader>
-          <DialogTitle>New project</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-sm font-semibold">New project</DialogTitle>
+          <DialogDescription className="text-xs">
             Collect the plan and source material before creating tasks.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-3">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-2.5">
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Project name"
               autoFocus
-              className="bg-white/[0.03]"
+              className="bg-muted/30 text-sm"
             />
             <Textarea
               value={brief}
               onChange={(event) => setBrief(event.target.value)}
               placeholder="Brief"
-              className="min-h-24 bg-white/[0.03]"
+              className="min-h-20 bg-muted/30 text-sm"
             />
             <Textarea
               value={planMarkdown}
               onChange={(event) => setPlanMarkdown(event.target.value)}
-              placeholder="Plan"
-              className="min-h-40 bg-white/[0.03] font-mono text-sm"
+              placeholder="Plan (markdown)"
+              className="min-h-36 bg-muted/30 font-mono text-xs"
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
-              className="group rounded-md border border-dashed border-emerald-400/25 bg-emerald-400/[0.04] p-4 transition-colors hover:border-emerald-300/40 hover:bg-emerald-400/[0.06]"
+              className="group rounded-lg border border-dashed border-primary/20 bg-primary/[0.03] p-3.5 transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
             >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-md border border-border/60 bg-white/[0.03] p-2">
-                  <Upload className="h-4 w-4 text-emerald-200" />
+              <div className="flex items-start gap-2.5">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Upload className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                     Intake resources
-                    <Sparkles className="h-3.5 w-3.5 text-emerald-200/80 transition-transform group-hover:translate-x-0.5" />
+                    <Sparkles className="h-3 w-3 text-primary/60 transition-transform group-hover:translate-x-0.5" />
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Drop repos or docs here, or add them manually below.
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Drop repos or docs, or add manually below.
                   </p>
                 </div>
               </div>
@@ -176,8 +176,8 @@ export function NewProjectDialog() {
                 <div
                   key={resource.id}
                   className={cn(
-                    "space-y-2 rounded-md border border-border/60 bg-white/[0.03] p-3",
-                    resource.kind === "repo" && "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.08)]",
+                    "space-y-1.5 rounded-lg border border-border/30 bg-muted/20 p-2.5",
+                    resource.kind === "repo" && "ring-1 ring-chart-2/10",
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ export function NewProjectDialog() {
                       value={resource.kind}
                       onValueChange={(value) => updateResource(resource.id, { kind: value as ProjectResourceKind })}
                     >
-                      <SelectTrigger className="h-8 w-28">
+                      <SelectTrigger className="h-7 w-24 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -198,7 +198,7 @@ export function NewProjectDialog() {
                       variant="ghost"
                       size="xs"
                       onClick={() => removeResource(resource.id)}
-                      className="ml-auto text-muted-foreground"
+                      className="ml-auto text-[10px] text-muted-foreground hover:text-destructive"
                     >
                       Remove
                     </Button>
@@ -207,16 +207,16 @@ export function NewProjectDialog() {
                     value={resource.label}
                     onChange={(event) => updateResource(resource.id, { label: event.target.value })}
                     placeholder={resource.kind === "repo" ? "Repo label" : "Doc label"}
-                    className="h-8 bg-background/60"
+                    className="h-7 bg-background/40 text-xs"
                   />
                   <Input
                     value={resource.locator}
                     onChange={(event) => updateResource(resource.id, { locator: event.target.value })}
                     placeholder={resource.kind === "repo" ? "/path/to/repo" : "/path/to/doc.md"}
-                    className="h-8 bg-background/60"
+                    className="h-7 bg-background/40 text-xs"
                   />
                   {index === 0 && resource.kind === "repo" ? (
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-200/70">
+                    <div className="text-[10px] font-medium text-chart-2/60">
                       {repoCount === 0 ? "Need one repository" : "Repository set"}
                     </div>
                   ) : null}
@@ -224,11 +224,11 @@ export function NewProjectDialog() {
               ))}
             </div>
 
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => addResource("repo")} className="flex-1">
+            <div className="flex gap-1.5">
+              <Button type="button" variant="outline" size="xs" onClick={() => addResource("repo")} className="flex-1">
                 Add repo
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => addResource("doc")} className="flex-1">
+              <Button type="button" variant="outline" size="xs" onClick={() => addResource("doc")} className="flex-1">
                 Add doc
               </Button>
             </div>
@@ -237,6 +237,7 @@ export function NewProjectDialog() {
               onClick={handleCreate}
               disabled={!name.trim() || !brief.trim() || !planMarkdown.trim() || repoCount === 0}
               className="w-full"
+              size="sm"
             >
               Create project
             </Button>

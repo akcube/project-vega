@@ -1,6 +1,5 @@
 import { useState, useRef, type KeyboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Send, Square } from "lucide-react";
 
 interface MessageInputProps {
@@ -34,36 +33,35 @@ export function MessageInput({
   };
 
   return (
-    <div>
-      <div className="flex gap-2 items-end">
-        <Textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Send a message..."
-          className="min-h-[44px] max-h-[180px] resize-none rounded-md border-border/70 bg-white/[0.03] text-sm"
-          disabled={disabled || isStreaming}
-          rows={1}
-        />
+    <div className="relative">
+      <Textarea
+        ref={textareaRef}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Send a message..."
+        className="min-h-[40px] max-h-[160px] resize-none rounded-lg border-border/40 bg-muted/40 pr-12 text-[13px] placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary/30"
+        disabled={disabled || isStreaming}
+        rows={1}
+      />
+      <div className="absolute bottom-1.5 right-1.5">
         {isStreaming ? (
-          <Button
-            size="icon"
-            variant="destructive"
+          <button
+            type="button"
             onClick={onCancel}
-            className="shrink-0 rounded-md"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-destructive/80 text-white transition-colors hover:bg-destructive"
           >
-            <Square className="h-4 w-4" />
-          </Button>
+            <Square className="h-3 w-3" />
+          </button>
         ) : (
-          <Button
-            size="icon"
+          <button
+            type="button"
             onClick={handleSend}
             disabled={disabled || !text.trim()}
-            className="shrink-0 rounded-md"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/80 text-primary-foreground transition-colors hover:bg-primary disabled:opacity-30 disabled:hover:bg-primary/80"
           >
-            <Send className="h-4 w-4" />
-          </Button>
+            <Send className="h-3 w-3" />
+          </button>
         )}
       </div>
     </div>

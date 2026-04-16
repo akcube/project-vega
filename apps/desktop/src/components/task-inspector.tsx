@@ -1,4 +1,4 @@
-import { Calendar, FolderGit2, Layers3, Trash2, Unplug } from "lucide-react";
+import { Calendar, FolderGit2, Layers3, Trash2, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,15 @@ interface TaskInspectorProps {
   onCloseWorkspace: (taskId: string) => void;
 }
 
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">{label}</div>
+      {children}
+    </div>
+  );
+}
+
 export function TaskInspector({
   workspace,
   onUpdateTaskWorkflowState,
@@ -20,34 +29,35 @@ export function TaskInspector({
   onCloseWorkspace,
 }: TaskInspectorProps) {
   return (
-    <aside className="flex h-full min-h-0 w-[320px] flex-col border-l border-border/60 bg-[#171b21]">
-      <div className="border-b border-border/60 px-5 py-4">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Task</div>
-        <h2 className="mt-2 truncate text-lg font-semibold text-foreground">{workspace.task.title}</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Badge variant="outline" className="rounded-md border-border/60 bg-white/[0.03]">
-            {workspace.task.provider}
-          </Badge>
-          <Badge variant="outline" className="rounded-md border-border/60 bg-white/[0.03]">
-            {workspace.task.model}
-          </Badge>
-          <Badge variant="outline" className="rounded-md border-border/60 bg-white/[0.03]">
-            {WORKFLOW_STATE_META[workspace.task.workflowState].label}
-          </Badge>
+    <aside className="flex h-full min-h-0 w-[260px] flex-col border-l border-border/40 bg-card">
+      {/* Header */}
+      <div className="border-b border-border/40 px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold text-foreground">{workspace.task.title}</h2>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              <Badge variant="outline" className="rounded-md border-border/40 text-[10px] px-1.5 py-0">
+                {workspace.task.provider}
+              </Badge>
+              <Badge variant="outline" className="rounded-md border-border/40 text-[10px] px-1.5 py-0">
+                {workspace.task.model}
+              </Badge>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-5">
-        <div className="space-y-5">
-          <section className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">State</div>
+      {/* Scrollable content */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+        <div className="space-y-4">
+          <InfoRow label="State">
             <Select
               value={workspace.task.workflowState}
               onValueChange={(value) =>
                 onUpdateTaskWorkflowState(workspace.task.id, value as WorkflowState)
               }
             >
-              <SelectTrigger className="bg-white/[0.03]">
+              <SelectTrigger className="h-8 bg-muted/40 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -58,110 +68,111 @@ export function TaskInspector({
                 ))}
               </SelectContent>
             </Select>
-          </section>
+          </InfoRow>
 
-          <section className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Project</div>
-            <div className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-3">
-              <div className="text-sm font-medium text-foreground">{workspace.project.name}</div>
-              <div className="mt-1 text-sm text-muted-foreground">{workspace.project.brief}</div>
-              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
+          <InfoRow label="Project">
+            <div className="rounded-lg border border-border/30 bg-muted/30 px-3 py-2">
+              <div className="text-xs font-medium text-foreground">{workspace.project.name}</div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">{workspace.project.brief}</div>
+              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <Calendar className="h-3 w-3" />
                 {workspace.project.createdAt}
               </div>
             </div>
-          </section>
+          </InfoRow>
 
-          <section className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Worktree</div>
-            <div className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-3 text-sm text-foreground">
-              <div className="flex items-center gap-2">
-                <FolderGit2 className="h-4 w-4 text-emerald-200" />
-                {workspace.task.branchName}
+          <InfoRow label="Worktree">
+            <div className="rounded-lg border border-border/30 bg-muted/30 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-xs">
+                <FolderGit2 className="h-3 w-3 text-chart-2" />
+                <span className="truncate font-medium text-foreground">{workspace.task.branchName}</span>
               </div>
-              <div className="mt-2 break-all text-xs text-muted-foreground">{workspace.task.worktreePath}</div>
+              <div className="mt-1 break-all text-[10px] text-muted-foreground">{workspace.task.worktreePath}</div>
             </div>
-          </section>
+          </InfoRow>
 
-          <section className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Source repo</div>
-            <div className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-3 text-sm">
+          <InfoRow label="Source repo">
+            <div className="rounded-lg border border-border/30 bg-muted/30 px-3 py-2 text-xs">
               {workspace.sourceRepo ? (
                 <>
                   <div className="font-medium text-foreground">{workspace.sourceRepo.label}</div>
-                  <div className="mt-1 break-all text-xs text-muted-foreground">
+                  <div className="mt-0.5 break-all text-[10px] text-muted-foreground">
                     {workspace.sourceRepo.locator}
                   </div>
                 </>
               ) : (
-                <div className="text-muted-foreground">No source repo attached.</div>
+                <div className="text-muted-foreground">No source repo</div>
               )}
             </div>
-          </section>
+          </InfoRow>
 
-          <section className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Documents</div>
-            <div className="space-y-2">
-              {workspace.documents.length === 0 ? (
-                <div className="rounded-md border border-dashed border-border/50 px-3 py-3 text-sm text-muted-foreground">
-                  No docs yet.
-                </div>
-              ) : (
-                workspace.documents.map((document) => (
+          <InfoRow label="Documents">
+            {workspace.documents.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border/30 px-3 py-2 text-[11px] text-muted-foreground">
+                No docs yet
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {workspace.documents.map((document) => (
                   <div
                     key={document.id}
-                    className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-2 text-sm text-foreground"
+                    className="rounded-lg border border-border/30 bg-muted/30 px-3 py-2 text-xs"
                   >
-                    <div className="font-medium">{document.label}</div>
-                    <div className="mt-1 break-all text-xs text-muted-foreground">{document.locator}</div>
+                    <div className="font-medium text-foreground">{document.label}</div>
+                    <div className="mt-0.5 break-all text-[10px] text-muted-foreground">{document.locator}</div>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
+                ))}
+              </div>
+            )}
+          </InfoRow>
 
-          <section className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Session</div>
-            <div className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-3 text-sm text-foreground">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Layers3 className="h-4 w-4" />
-                {workspace.live.hasSession
-                  ? workspace.live.isStreaming
-                    ? "Live session connected"
-                    : "Session connected"
-                  : workspace.live.canResume
-                    ? "Session ready to reload"
-                    : "No live session"}
+          <InfoRow label="Session">
+            <div className="rounded-lg border border-border/30 bg-muted/30 px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Layers3 className="h-3 w-3" />
+                <span>
+                  {workspace.live.hasSession
+                    ? workspace.live.isStreaming
+                      ? "Live"
+                      : "Connected"
+                    : workspace.live.canResume
+                      ? "Ready to reload"
+                      : "No session"}
+                </span>
+                {workspace.live.isStreaming && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-chart-2 dot-pulse" />
+                )}
               </div>
               {workspace.run ? (
-                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                  <div>Run status: {workspace.run.run.status}</div>
+                <div className="mt-1.5 space-y-0.5 text-[10px] text-muted-foreground">
+                  <div>Status: {workspace.run.run.status}</div>
                   <div>Session: {workspace.run.sessionReference ?? "none"}</div>
                 </div>
               ) : null}
             </div>
-          </section>
+          </InfoRow>
         </div>
       </div>
 
-      <div className="border-t border-border/60 px-5 py-4">
-        <div className="flex gap-2">
+      {/* Footer actions */}
+      <div className="border-t border-border/40 px-4 py-2.5">
+        <div className="flex gap-1.5">
           <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
+            variant="ghost"
+            size="xs"
+            className="flex-1 text-muted-foreground hover:text-foreground"
             onClick={() => onCloseWorkspace(workspace.task.id)}
           >
-            <Unplug className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
             Close
           </Button>
           <Button
-            variant="destructive"
-            size="sm"
-            className="flex-1"
+            variant="ghost"
+            size="xs"
+            className="flex-1 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onDeleteTask(workspace.task.id)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3" />
             Delete
           </Button>
         </div>

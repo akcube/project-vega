@@ -4,17 +4,17 @@ import type { ReviewSummary } from "@/lib/types";
 
 export function ReviewView({ review }: { review: ReviewSummary }) {
   return (
-    <div className="grid h-full min-h-0 grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)] divide-x divide-border/60">
-      <section className="min-h-0 overflow-y-auto px-7 py-6">
-        <div className="mb-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Diff focus</div>
-          <h2 className="mt-2 text-lg font-semibold">Recent file changes</h2>
+    <div className="grid h-full min-h-0 grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] divide-x divide-border/30">
+      <section className="min-h-0 overflow-y-auto px-5 py-4">
+        <div className="mb-4">
+          <h2 className="text-xs font-semibold text-foreground">File changes</h2>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Diffs from the current run</p>
         </div>
 
         {review.diffs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No file diffs have been emitted yet.</p>
+          <p className="text-xs text-muted-foreground">No file diffs yet.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {review.diffs.map((diff, index) => (
               <DiffView
                 key={`${diff.path}-${index}`}
@@ -27,16 +27,16 @@ export function ReviewView({ review }: { review: ReviewSummary }) {
         )}
       </section>
 
-      <section className="min-h-0 overflow-y-auto px-6 py-6">
-        <div className="mb-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Activity</div>
-          <h2 className="mt-2 text-lg font-semibold">Tool trace</h2>
+      <section className="min-h-0 overflow-y-auto px-4 py-4">
+        <div className="mb-4">
+          <h2 className="text-xs font-semibold text-foreground">Tool trace</h2>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Activity log</p>
         </div>
 
         {review.toolCalls.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Tool output will collect here as the run progresses.</p>
+          <p className="text-xs text-muted-foreground">Tool output will appear here.</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {review.toolCalls.map((toolCall) => (
               <ToolCallBlock key={toolCall.id} toolCall={toolCall} />
             ))}

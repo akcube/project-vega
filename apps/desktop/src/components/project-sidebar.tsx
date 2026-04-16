@@ -1,5 +1,8 @@
+import { Plus } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { NewProjectDialog } from "@/components/new-project-dialog";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -17,66 +20,75 @@ export function ProjectSidebar({
   onDeleteProject,
 }: ProjectSidebarProps) {
   return (
-    <aside className="flex h-full min-h-0 w-[300px] flex-col border-r border-border/60 bg-[#171b21]">
-      <div className="border-b border-border/60 px-5 py-4">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Projects</div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          Active projects and their plans.
-        </div>
+    <aside className="flex h-full min-h-0 w-[240px] flex-col border-r border-border/40 bg-card">
+      <div className="border-b border-border/40 px-4 py-3">
+        <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Projects</div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {projects.length === 0 ? (
-          <div className="px-3 py-6 text-sm text-muted-foreground">
-            Create a project to start organizing tasks.
+          <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+            Create a project to start.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             {projects.map((project) => {
               const active = project.id === selectedProjectId;
               return (
-                <div
-                  key={project.id}
-                  className={cn(
-                    "group rounded-md border px-3 py-3 transition-colors",
-                    active
-                      ? "border-emerald-400/30 bg-emerald-400/[0.08]"
-                      : "border-border/60 bg-white/[0.03] hover:bg-white/[0.05]",
-                  )}
-                >
+                <div key={project.id} className="group">
                   <button
                     type="button"
                     onClick={() => onSelectProject(project.id)}
-                    className="flex w-full flex-col items-start gap-2 text-left"
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all duration-150",
+                      active
+                        ? "bg-primary/10 text-foreground"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    )}
                   >
-                    <div className="flex w-full items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-foreground">{project.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">{project.brief}</div>
-                      </div>
-                      <Badge variant="outline" className="rounded-md border-border/60 bg-white/[0.03]">
-                        {project.lifecycleState}
-                      </Badge>
+                    {/* Project dot indicator */}
+                    <span
+                      className={cn(
+                        "h-2 w-2 shrink-0 rounded-full transition-colors",
+                        active ? "bg-primary" : "bg-muted-foreground/30",
+                      )}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-medium">{project.name}</div>
+                      <div className="truncate text-[11px] text-muted-foreground">{project.brief}</div>
                     </div>
-                    <div className="w-full text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                      {active ? "Selected" : "Open project"}
-                    </div>
-                  </button>
-                  <div className="mt-3 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={() => onDeleteProject(project.id)}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "rounded-md border-border/30 text-[10px] px-1.5 py-0 opacity-0 transition-opacity group-hover:opacity-100",
+                        active && "opacity-100",
+                      )}
                     >
-                      Delete
-                    </Button>
-                  </div>
+                      {project.lifecycleState}
+                    </Badge>
+                  </button>
+                  {active && (
+                    <div className="slide-in flex justify-end px-2 pb-1">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="text-[10px] text-muted-foreground hover:text-destructive"
+                        onClick={() => onDeleteProject(project.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
+      </div>
+
+      {/* Discord-style "add" button at bottom */}
+      <div className="border-t border-border/40 p-2">
+        <NewProjectDialog />
       </div>
     </aside>
   );
