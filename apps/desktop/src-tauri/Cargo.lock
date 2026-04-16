@@ -4509,6 +4509,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "futures",
+ "git2",
  "portable-pty",
  "rusqlite",
  "serde",

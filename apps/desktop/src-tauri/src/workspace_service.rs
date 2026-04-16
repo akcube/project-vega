@@ -13,8 +13,10 @@ use crate::store::Store;
 use crate::terminal_service::TerminalService;
 use crate::view_model::{
     LiveStateViewModel, RunViewModel, TaskWorkspaceViewModel, TerminalEvent, TerminalSnapshot,
-    WorkspaceSnapshot, WorkspaceSummaryViewModel,
+    WorktreeFileDocumentViewModel, WorktreeInspectionViewModel, WorkspaceSnapshot,
+    WorkspaceSummaryViewModel,
 };
+use crate::worktree_inspector::WorktreeInspector;
 
 #[derive(Clone)]
 pub struct WorkspaceService {
@@ -74,6 +76,30 @@ impl WorkspaceService {
     pub fn close_workspace(&self, task_id: &str) -> Result<()> {
         self.terminals.stop(task_id)?;
         self.store.close_active_workspace(task_id)
+    }
+
+    pub fn inspect_worktree(&self, task_id: &str) -> Result<WorktreeInspectionViewModel> {
+        let task = self.store.get_task(task_id)?;
+        WorktreeInspector::new().inspect(Path::new(&task.worktree_path))
+    }
+
+    pub fn read_worktree_file(
+        &self,
+        task_id: &str,
+        relative_path: &str,
+    ) -> Result<WorktreeFileDocumentViewModel> {
+        let task = self.store.get_task(task_id)?;
+        WorktreeInspector::new().read_file(Path::new(&task.worktree_path), relative_path)
+    }
+
+    pub fn save_worktree_file(
+        &self,
+        task_id: &str,
+        relative_path: &str,
+        contents: &str,
+    ) -> Result<WorktreeFileDocumentViewModel> {
+        let task = self.store.get_task(task_id)?;
+        WorktreeInspector::new().write_file(Path::new(&task.worktree_path), relative_path, contents)
     }
 
     pub fn set_workspace_view(

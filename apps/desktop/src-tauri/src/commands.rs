@@ -8,7 +8,7 @@ use crate::domain::{
 use crate::events::SessionUpdate;
 use crate::view_model::{
     ProjectBoardViewModel, TaskWorkspaceViewModel, TerminalEvent, TerminalSnapshot,
-    WorkspaceSummaryViewModel,
+    WorktreeFileDocumentViewModel, WorktreeInspectionViewModel, WorkspaceSummaryViewModel,
 };
 use crate::AppState;
 
@@ -135,6 +135,42 @@ pub fn close_workspace(state: State<'_, AppState>, task_id: String) -> Result<()
     state
         .workspace
         .close_workspace(&task_id)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn inspect_worktree(
+    state: State<'_, AppState>,
+    task_id: String,
+) -> Result<WorktreeInspectionViewModel, String> {
+    state
+        .workspace
+        .inspect_worktree(&task_id)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn read_worktree_file(
+    state: State<'_, AppState>,
+    task_id: String,
+    relative_path: String,
+) -> Result<WorktreeFileDocumentViewModel, String> {
+    state
+        .workspace
+        .read_worktree_file(&task_id, &relative_path)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn save_worktree_file(
+    state: State<'_, AppState>,
+    task_id: String,
+    relative_path: String,
+    contents: String,
+) -> Result<WorktreeFileDocumentViewModel, String> {
+    state
+        .workspace
+        .save_worktree_file(&task_id, &relative_path, &contents)
         .map_err(|error| error.to_string())
 }
 

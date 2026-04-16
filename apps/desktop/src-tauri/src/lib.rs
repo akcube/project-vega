@@ -8,6 +8,7 @@ mod session;
 mod store;
 mod terminal_service;
 mod view_model;
+mod worktree_inspector;
 mod workspace_service;
 
 use std::sync::Arc;
@@ -52,6 +53,9 @@ pub fn run() {
             commands::open_workspace,
             commands::set_workspace_view,
             commands::close_workspace,
+            commands::inspect_worktree,
+            commands::read_worktree_file,
+            commands::save_worktree_file,
             commands::attach_terminal,
             commands::write_terminal,
             commands::resize_terminal,
