@@ -1,0 +1,32 @@
+[package]
+name = "vega-desktop"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "vega_desktop_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "vega-desktop"
+path = "src/main.rs"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.34", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+anyhow = "1"
+chrono = "0.4"
+agent-client-protocol = { version = "0.10", features = ["unstable"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dev-dependencies]
+tempfile = "3"
