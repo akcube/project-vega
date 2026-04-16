@@ -1,6 +1,7 @@
 mod commands;
 mod domain;
 mod events;
+mod git_commands;
 mod projection;
 mod session;
 mod store;
@@ -41,6 +42,10 @@ pub fn run() {
             commands::set_last_open_view,
             commands::send_prompt,
             commands::cancel_run,
+            git_commands::load_commit_history,
+            git_commands::load_commit_diff,
+            git_commands::load_commit_replay,
+            git_commands::create_worktree,
         ])
         .run(tauri::generate_context!())
         .expect("error running vega");
