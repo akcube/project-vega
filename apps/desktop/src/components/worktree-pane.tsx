@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import CodeMirror from "@uiw/react-codemirror";
-import { LanguageDescription } from "@codemirror/language";
-import { languages } from "@codemirror/language-data";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -16,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { languageExtensionForPath } from "@/lib/code-language";
 import {
   buildInitialExpandedPaths,
   changeKindLabel,
@@ -195,35 +194,12 @@ export function WorktreePane({ workspace }: { workspace: TaskWorkspaceViewModel 
   }, [refreshInspection]);
 
   useEffect(() => {
-    let cancelled = false;
-
     if (!document || document.isBinary || document.isDeleted) {
       setLanguageExtension(null);
       return;
     }
 
-    const match = LanguageDescription.matchFilename(languages, document.path);
-    if (!match) {
-      setLanguageExtension(null);
-      return;
-    }
-
-    void match
-      .load()
-      .then((support) => {
-        if (!cancelled) {
-          setLanguageExtension(support);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLanguageExtension(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    setLanguageExtension(languageExtensionForPath(document.path));
   }, [document]);
 
   useEffect(() => {

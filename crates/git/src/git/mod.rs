@@ -8,6 +8,6 @@ pub use models::{
     CommitReplayFile, CommitReplayHunk, CommitReplayLine, CommitReplayRequest, CommitReplayResult,
     CommitSummary, CreateProjectRequest, CreateWorktreeRequest, DiffRequest, DiffResult, DiffStats,
     DiffTarget, GitRequest, GitResponse, ProjectWorkspace, ReplayFileStatus, ReplayLineKind,
-    WorktreeHandle,
+    SemanticHunk, SemanticHunkKind, WorktreeHandle,
 };
 pub use service::GitService;

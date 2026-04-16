@@ -30,7 +30,7 @@ export function WorkspaceFrame({ workspace, onViewChange }: WorkspaceFrameProps)
             <TerminalPane key={workspace.task.id} workspace={workspace} />
           ) : null}
           {workspace.workspace.selectedView === "review" ? (
-            <ReviewView review={workspace.review} />
+            <ReviewView workspace={workspace} />
           ) : null}
         </div>
       </div>

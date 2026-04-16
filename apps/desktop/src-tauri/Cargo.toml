@@ -23,6 +23,8 @@ futures = "0.3"
 anyhow = "1"
 chrono = "0.4"
 agent-client-protocol = { version = "0.10", features = ["unstable"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+schemars = { version = "1", features = ["derive"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 vega_git = { path = "../../../crates/git" }
 portable-pty = "0.9"

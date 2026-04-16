@@ -5,5 +5,5 @@ pub use git::{
     CommitReplayFile, CommitReplayHunk, CommitReplayLine, CommitReplayRequest, CommitReplayResult,
     CommitSummary, CreateProjectRequest, CreateWorktreeRequest, DiffRequest, DiffResult, DiffStats,
     DiffTarget, GitRequest, GitResponse, GitService, GitServiceError, ProjectWorkspace,
-    ReplayFileStatus, ReplayLineKind, Result, WorktreeHandle,
+    ReplayFileStatus, ReplayLineKind, Result, SemanticHunk, SemanticHunkKind, WorktreeHandle,
 };
