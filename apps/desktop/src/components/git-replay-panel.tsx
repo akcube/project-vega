@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   FolderGit2,
-  GitCommitHorizontal,
   Loader2,
   Pause,
   Play,
@@ -141,7 +140,7 @@ export function GitReplayPanel({
       replayCacheRef.current = createReplayCursorCache();
 
       try {
-        const result = await loadCommitHistory(source.path);
+        const result = await loadCommitHistory(source.path, 1);
         if (cancelled) {
           return;
         }
@@ -404,8 +403,8 @@ export function GitReplayPanel({
       : null;
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_1fr]">
-      <header className="border-b border-border/60 px-7 py-6">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+      <header className="shrink-0 border-b border-border/60 px-7 py-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -427,7 +426,7 @@ export function GitReplayPanel({
               onValueChange={(value) => setSelectedSourceId(value)}
               disabled={repoSources.length === 0}
             >
-              <SelectTrigger className="w-full rounded-md border-border/70 bg-black/10">
+              <SelectTrigger className="w-full rounded-md border-border/70 bg-muted/50">
                 <SelectValue placeholder="Choose a repository" />
               </SelectTrigger>
               <SelectContent>
@@ -445,91 +444,32 @@ export function GitReplayPanel({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
+          <Badge variant="outline" className="rounded-md border-border/70 bg-muted/50">
             {headReference ?? "No head loaded"}
           </Badge>
-          <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
+          <Badge variant="outline" className="rounded-md border-border/70 bg-muted/50">
             {history.length} commits
           </Badge>
-          <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
+          <Badge variant="outline" className="rounded-md border-border/70 bg-muted/50">
             {replayPlan?.operations.length ?? 0} replay steps
           </Badge>
-          <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
+          <Badge variant="outline" className="rounded-md border-border/70 bg-muted/50">
             {selectedSource?.path ?? workspace.task.worktreePath}
           </Badge>
         </div>
       </header>
 
-      <div className="grid min-h-0 grid-cols-[240px_minmax(0,1fr)] divide-x divide-border/60">
-        <aside className="min-h-0 overflow-y-auto px-5 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                History
-              </div>
-              <h3 className="mt-2 text-sm font-semibold">Commit timeline</h3>
-            </div>
-            {loadingHistory && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-          </div>
-
+      <div className="flex min-h-[600px] flex-1 flex-col">
+        <section className="flex min-h-0 flex-1 flex-col">
           {historyError ? (
-            <ReplayMessage
-              title="Couldn’t load repository history"
-              body={historyError}
-              icon={<FolderGit2 className="h-4 w-4" />}
-            />
-          ) : history.length === 0 ? (
-            <ReplayMessage
-              title={selectedSource ? "No commits found" : "No repository source"}
-              body={
-                selectedSource
-                  ? "This source didn’t return any commits yet."
-                  : "Attach a repo resource or use a task with a git worktree."
-              }
-              icon={<GitCommitHorizontal className="h-4 w-4" />}
-            />
-          ) : (
-            <div className="mt-4 space-y-2">
-              {history.map((commit) => {
-                const active = commit.oid === selectedCommitId;
-                return (
-                  <button
-                    key={commit.oid}
-                    onClick={() => setSelectedCommitId(commit.oid)}
-                    className={cn(
-                      "w-full rounded-md border px-3 py-3 text-left transition-all",
-                      active
-                        ? "border-emerald-300/35 bg-emerald-300/[0.08] shadow-[0_0_30px_rgba(74,222,128,0.08)]"
-                        : "border-transparent bg-white/[0.02] hover:border-border/70 hover:bg-white/[0.045]",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {commit.summary}
-                        </div>
-                        <div className="mt-1 truncate text-xs text-muted-foreground">
-                          {commit.authorName}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
-                      >
-                        {commit.shortOid}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 truncate text-xs text-muted-foreground">
-                      {formatShortDate(commit.timestamp)}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="px-6 py-4">
+              <ReplayMessage
+                title="Couldn’t load repository history"
+                body={historyError}
+                icon={<FolderGit2 className="h-4 w-4" />}
+              />
             </div>
-          )}
-        </aside>
-
-        <section className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)]">
+          ) : null}
           <div className="border-b border-border/60 px-6 py-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
@@ -537,12 +477,12 @@ export function GitReplayPanel({
                   Replay theater
                 </div>
                 <h3 className="mt-2 truncate text-lg font-semibold">
-                  {replay?.commit.summary ?? "Pick a commit"}
+                  {replay?.commit.summary ?? "Loading latest commit..."}
                 </h3>
                 <p className="mt-2 truncate text-sm text-muted-foreground">
                   {replay
                     ? `${replay.commit.authorName} • ${formatTimestamp(replay.commit.timestamp)} • ${replay.commit.shortOid}`
-                    : "Select a commit from the timeline to load the replay plan."}
+                    : "Fetching the latest commit for replay."}
                 </p>
               </div>
 
@@ -555,7 +495,7 @@ export function GitReplayPanel({
           </div>
 
           <div className="border-b border-border/60 px-6 py-4">
-            <div className="rounded-xl border border-white/8 bg-slate-950/78 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.24)]">
+            <div className="rounded-xl border border-border/40 bg-card/80 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.12)]">
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="default"
@@ -574,7 +514,7 @@ export function GitReplayPanel({
                     setPlaybackCursor((current) => Math.max(current - 1, 0))
                   }
                   disabled={!canReplay}
-                  className="rounded-md border-white/10 bg-white/[0.02]"
+                  className="rounded-md"
                 >
                   <SkipBack className="h-3.5 w-3.5" />
                   Back
@@ -586,7 +526,7 @@ export function GitReplayPanel({
                     setPlaybackCursor((current) => Math.min(current + 1, totalSteps))
                   }
                   disabled={!canReplay}
-                  className="rounded-md border-white/10 bg-white/[0.02]"
+                  className="rounded-md"
                 >
                   <SkipForward className="h-3.5 w-3.5" />
                   Forward
@@ -599,15 +539,15 @@ export function GitReplayPanel({
                     setPlaybackCursor(0);
                   }}
                   disabled={!canReplay}
-                  className="rounded-md border-white/10 bg-white/[0.02]"
+                  className="rounded-md"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Reset
                 </Button>
 
-                <label className="ml-auto flex items-center gap-3 text-xs text-slate-300">
-                  <span className="uppercase tracking-[0.16em] text-slate-400">Speed</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                <label className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="uppercase tracking-[0.16em] text-muted-foreground">Speed</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
                     Slow
                   </span>
                   <input
@@ -621,335 +561,252 @@ export function GitReplayPanel({
                         MAX_PLAYBACK_DELAY_MS + MIN_PLAYBACK_DELAY_MS - Number(event.target.value),
                       )
                     }
-                    className="w-32 accent-emerald-400"
+                    className="w-32 accent-primary"
                   />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
                     Fast
                   </span>
-                  <span className="font-mono text-[11px] text-slate-400">{speedMs}ms</span>
+                  <span className="font-mono text-[11px] text-muted-foreground">{speedMs}ms</span>
                 </label>
               </div>
 
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/8">
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/60">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-lime-200 transition-[width] duration-100"
+                  className="h-full rounded-full bg-gradient-to-r from-primary via-chart-5 to-chart-2 transition-[width] duration-100"
                   style={{ width: `${progress}%` }}
                 />
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span>{safeCursor} / {totalSteps} steps</span>
-                <span className="truncate text-right text-slate-400">{activeLabel}</span>
+                <span className="truncate text-right text-muted-foreground/80">{activeLabel}</span>
               </div>
             </div>
           </div>
 
-          <div className="min-h-0 px-4 py-4 sm:px-6 sm:py-5">
-            <div className="grid h-full min-h-[560px] gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden rounded-2xl border border-border/60 bg-black/20 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
-                <div className="border-b border-border/60 px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-foreground">
-                        {frame.editor.activeFilePath}
-                      </div>
-                      <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                        {formatReplayStatus(frame.editor.activeFileStatus)}
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
-                      {frame.editor.activeFileIsBinary ? "Binary file" : "CodeMirror replay"}
-                    </Badge>
-                  </div>
+          <div className="grid min-h-0 grid-cols-[180px_minmax(0,1fr)_320px] divide-x divide-border/40">
+            {/* ── Changed files sidebar ── */}
+            <aside className="min-h-0 overflow-y-auto bg-card/30 px-2 py-3">
+              <div className="mb-2 px-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                Changed files
+              </div>
+              {replay?.files.length ? (
+                replay.files.map((file, index) => {
+                  const path = file.newPath ?? file.oldPath ?? "untitled";
+                  const fileName = path.split("/").pop() ?? path;
+                  const active = index === frame.editor.activeFileIndex;
+                  return (
+                    <button
+                      key={`${path}-${index}`}
+                      type="button"
+                      className={cn(
+                        "mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                        active
+                          ? "bg-primary/12 text-foreground ring-1 ring-primary/20"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                      )}
+                    >
+                      <span className="min-w-0 truncate font-mono">{fileName}</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-2 text-xs text-muted-foreground">
+                  {loadingReplay ? "Loading..." : "No files"}
+                </div>
+              )}
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {replay?.files.length ? (
-                      replay.files.map((file, index) => {
-                        const path = file.newPath ?? file.oldPath ?? "untitled";
-                        const active = index === frame.editor.activeFileIndex;
-                        return (
-                          <Badge
-                            key={`${path}-${index}`}
-                            variant="outline"
-                            className={cn(
-                              "rounded-md border-border/70 bg-black/10 px-2.5 py-1 font-mono text-[11px]",
-                              active &&
-                                "border-emerald-300/45 bg-emerald-300/[0.08] text-emerald-100",
-                            )}
-                          >
-                            {path}
-                          </Badge>
-                        );
-                      })
-                    ) : (
-                      <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
-                        No file replay loaded
-                      </Badge>
-                    )}
+            </aside>
+
+            {/* ── Editor pane ── */}
+            <section className="grid min-h-0 grid-rows-[auto_1fr]">
+              <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-foreground">
+                    {frame.editor.activeFilePath}
+                  </div>
+                  <div className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {formatReplayStatus(frame.editor.activeFileStatus)}
                   </div>
                 </div>
-
-                <div className="min-h-0">
-                  {loadingReplay ? (
-                    <EditorEmptyState
-                      title="Building replay"
-                      body="Collecting commit snapshots and hunk data from the git service."
-                    />
-                  ) : replayError ? (
-                    <EditorEmptyState title="Couldn’t load replay" body={replayError} />
-                  ) : !selectedCommitId ? (
-                    <EditorEmptyState
-                      title="Choose a commit"
-                      body="Select a commit from the timeline to generate the replay plan."
-                    />
-                  ) : frame.editor.activeFileIndex === null ? (
-                    <EditorEmptyState
-                      title="Replay ready"
-                      body="Press play or step forward to open the first changed file."
-                    />
-                  ) : frame.editor.activeFileIsBinary ? (
-                    <EditorEmptyState
-                      title="Binary file"
-                      body="This file is part of the commit, but typed playback is skipped because it isn’t text."
-                    />
-                  ) : (
-                    <GitReplayEditor
-                      frame={frame}
-                      loading={loadingReplay}
-                      selectedLineNumber={selectedAnchorLineNumber}
-                      inlineComment={inlineComment}
-                      onLineSelect={handleReplayLineSelect}
-                    />
-                  )}
-                </div>
+                <Badge variant="outline" className="rounded-md border-border/70 bg-muted/50 text-[10px]">
+                  {frame.editor.activeFileIsBinary ? "Binary" : "Replay"}
+                </Badge>
               </div>
 
-              <aside className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden rounded-2xl border border-border/60 bg-white/[0.02] shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
-                <div className="border-b border-border/60 px-5 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                        Review lane
-                      </div>
-                      <div className="mt-2 text-sm font-semibold text-foreground">
-                        Pause, click, and chat with the agent inline
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
-                      {submittedNotes.length} chats
-                    </Badge>
-                  </div>
-                </div>
+              <div className="min-h-0">
+                {loadingReplay ? (
+                  <EditorEmptyState
+                    title="Building replay"
+                    body="Collecting commit snapshots and hunk data from the git service."
+                  />
+                ) : replayError ? (
+                  <EditorEmptyState title="Couldn’t load replay" body={replayError} />
+                ) : !selectedCommitId ? (
+                  <EditorEmptyState
+                    title="No commit loaded"
+                    body="Waiting for the latest commit to load."
+                  />
+                ) : frame.editor.activeFileIndex === null ? (
+                  <EditorEmptyState
+                    title="Replay ready"
+                    body="Press play or step forward to open the first changed file."
+                  />
+                ) : frame.editor.activeFileIsBinary ? (
+                  <EditorEmptyState
+                    title="Binary file"
+                    body="This file is part of the commit, but typed playback is skipped because it isn’t text."
+                  />
+                ) : (
+                  <GitReplayEditor
+                    frame={frame}
+                    loading={loadingReplay}
+                    selectedLineNumber={selectedAnchorLineNumber}
+                    inlineComment={inlineComment}
+                    onLineSelect={handleReplayLineSelect}
+                  />
+                )}
+              </div>
+            </section>
 
-                <div className="min-h-0 overflow-y-auto px-5 py-4">
-                  <section className="rounded-xl border border-white/8 bg-slate-950/70 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                          Ask the agent
+            {/* ── Annotations & review sidebar ── */}
+            <aside className="min-h-0 overflow-y-auto bg-card/30 px-4 py-4">
+              {/* Semantic diff annotations */}
+              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                Semantic diff
+              </div>
+              <div className="mt-1 text-xs font-medium text-foreground">
+                {semanticFile
+                  ? `${semanticFile.newPath ?? semanticFile.oldPath ?? "file"}`
+                  : "Logical change groups"}
+              </div>
+
+              <div className="mt-3">
+                {loadingReplay ? (
+                  <p className="text-xs text-muted-foreground">
+                    Grouping and explaining the meaningful changes...
+                  </p>
+                ) : semanticHunks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No semantic annotations for this file yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {semanticHunks.map((semanticHunk) => (
+                      <article
+                        key={semanticHunk.id}
+                        className={cn(
+                          "rounded-lg border border-border/40 bg-card/60 p-3",
+                          reviewAnchor?.semanticTitle === semanticHunk.title &&
+                            "border-primary/35 bg-primary/[0.08]",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "rounded-md px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em]",
+                              semanticKindClassName(semanticHunk.kind),
+                            )}
+                          >
+                            {semanticKindLabel(semanticHunk.kind)}
+                          </Badge>
+                          {semanticHunk.confidence !== null &&
+                          semanticHunk.confidence !== undefined ? (
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              {Math.round(semanticHunk.confidence * 100)}%
+                            </span>
+                          ) : null}
                         </div>
-                        <h4 className="mt-2 text-sm font-semibold text-foreground">
-                          Click a line to ask a question or request a change right in the editor
+
+                        <h4 className="mt-2 text-xs font-semibold text-foreground">
+                          {semanticHunk.title}
                         </h4>
-                      </div>
+
+                        {semanticHunk.summary ? (
+                          <p className="mt-1.5 text-xs leading-5 text-foreground/80">
+                            {semanticHunk.summary}
+                          </p>
+                        ) : null}
+
+                        {semanticHunk.rationale ? (
+                          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                            <span className="font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+                              Why
+                            </span>
+                            {" "}
+                            {semanticHunk.rationale}
+                          </p>
+                        ) : null}
+
+                        {semanticHunk.reviewNotes.length > 0 ? (
+                          <div className="mt-2 space-y-1">
+                            {semanticHunk.reviewNotes.slice(0, 3).map((note, index) => (
+                              <p
+                                key={`${semanticHunk.id}-note-${index}`}
+                                className="text-[11px] leading-4 text-muted-foreground"
+                              >
+                                {note}
+                              </p>
+                            ))}
+                          </div>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Review anchor */}
+              {reviewAnchor ? (
+                <div className="mt-5 border-t border-border/30 pt-4">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Review anchor
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    <Badge
+                      variant="outline"
+                      className="rounded-md border-primary/30 bg-primary/[0.08] font-mono text-[10px] text-primary"
+                    >
+                      {reviewAnchor.filePath}:{reviewAnchor.lineNumber}
+                    </Badge>
+                    <div className="rounded-md border border-border/40 bg-muted/40 px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
+                      {reviewAnchor.lineText || "(blank line)"}
                     </div>
-
-                    {reviewAnchor ? (
-                      <div className="mt-4 space-y-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Badge
-                            variant="outline"
-                            className="rounded-md border-emerald-300/30 bg-emerald-300/[0.08] font-mono text-[10px] text-emerald-100"
-                          >
-                            {reviewAnchor.filePath}:{reviewAnchor.lineNumber}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
-                          >
-                            step {reviewAnchor.replayStep}/{reviewAnchor.replayStepCount}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
-                          >
-                            {reviewAnchor.commitShortOid}
-                          </Badge>
-                        </div>
-
-                        <div className="rounded-lg border border-white/8 bg-black/25 px-3 py-2 font-mono text-xs text-slate-300">
-                          {reviewAnchor.lineText || "(blank line)"}
-                        </div>
-
-                        <p className="text-xs leading-5 text-slate-400">
-                          <span className="font-medium uppercase tracking-[0.16em] text-slate-500">
-                            Composer open
-                          </span>
-                          {" "}
-                          at {reviewAnchor.filePath}:{reviewAnchor.lineNumber}
-                          {reviewAnchor.semanticTitle ? ` in ${reviewAnchor.semanticTitle}` : ""}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        Pause the replay and click a line in the editor to start a review question.
-                      </p>
-                    )}
-
-                    {reviewAnchor ? (
-                      <p className="mt-4 text-xs text-slate-400">
-                        The inline composer is pinned to the selected line in the code view.
+                    {reviewAnchor.semanticTitle ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        in {reviewAnchor.semanticTitle}
                       </p>
                     ) : null}
-                  </section>
-
-                  {submittedNotes.length > 0 ? (
-                    <section className="mt-4 rounded-xl border border-white/8 bg-black/20 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                          Review Q&A
-                        </div>
-                        <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
-                          {submittedNotes.length}
-                        </Badge>
-                      </div>
-
-                      <div className="mt-3 space-y-3">
-                        {submittedNotes.slice(0, 6).map((note) => (
-                          <article
-                            key={note.id}
-                            className="rounded-lg border border-white/8 bg-slate-950/60 px-3 py-3"
-                          >
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
-                              >
-                                {note.anchor.filePath}:{note.anchor.lineNumber}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
-                              >
-                                {note.anchor.commitShortOid}
-                              </Badge>
-                            </div>
-                            <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                              Question
-                            </p>
-                            <p className="mt-1 text-sm leading-6 text-slate-200">{note.question}</p>
-                            <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                              Agent
-                            </p>
-                            <p className="mt-1 text-sm leading-6 text-slate-300">
-                              {note.answer ?? "The agent responded without a plain-text answer."}
-                            </p>
-                            <p className="mt-2 text-[11px] text-slate-500">
-                              {formatSentTimestamp(note.createdAt)}
-                            </p>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  <section className="mt-4 rounded-xl border border-white/8 bg-black/20 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                          Semantic diff
-                        </div>
-                        <div className="mt-2 text-sm font-semibold text-foreground">
-                          {semanticFile
-                            ? `Logical changes in ${semanticFile.newPath ?? semanticFile.oldPath ?? "file"}`
-                            : "Logical change groups"}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="rounded-md border-border/70 bg-black/10">
-                        {semanticHunks.length} semantic hunks
-                      </Badge>
-                    </div>
-
-                    <div className="mt-4">
-                      {loadingReplay ? (
-                        <p className="text-sm text-muted-foreground">
-                          Asking the semantic diff annotator to group and explain the meaningful changes.
-                        </p>
-                      ) : semanticHunks.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No semantic annotations for this file yet. Very small changes may be omitted, or
-                          the model may be unavailable in this runtime.
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {semanticHunks.map((semanticHunk) => (
-                            <article
-                              key={semanticHunk.id}
-                              className={cn(
-                                "rounded-xl border border-white/8 bg-slate-950/70 p-4",
-                                reviewAnchor?.semanticTitle === semanticHunk.title &&
-                                  "border-emerald-300/35 bg-emerald-300/[0.08]",
-                              )}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "rounded-md px-2 py-0.5 text-[10px] uppercase tracking-[0.18em]",
-                                    semanticKindClassName(semanticHunk.kind),
-                                  )}
-                                >
-                                  {semanticKindLabel(semanticHunk.kind)}
-                                </Badge>
-                                {semanticHunk.confidence !== null &&
-                                semanticHunk.confidence !== undefined ? (
-                                  <span className="font-mono text-[11px] text-slate-400">
-                                    {Math.round(semanticHunk.confidence * 100)}%
-                                  </span>
-                                ) : null}
-                              </div>
-
-                              <h4 className="mt-3 text-sm font-semibold text-foreground">
-                                {semanticHunk.title}
-                              </h4>
-
-                              {semanticHunk.summary ? (
-                                <p className="mt-2 text-sm leading-6 text-slate-200">
-                                  {semanticHunk.summary}
-                                </p>
-                              ) : null}
-
-                              {semanticHunk.rationale ? (
-                                <p className="mt-3 text-xs leading-5 text-slate-400">
-                                  <span className="font-medium uppercase tracking-[0.16em] text-slate-500">
-                                    Why
-                                  </span>
-                                  {" "}
-                                  {semanticHunk.rationale}
-                                </p>
-                              ) : null}
-
-                              {semanticHunk.reviewNotes.length > 0 ? (
-                                <div className="mt-3 space-y-2">
-                                  {semanticHunk.reviewNotes.slice(0, 3).map((note, index) => (
-                                    <p
-                                      key={`${semanticHunk.id}-note-${index}`}
-                                      className="text-xs leading-5 text-slate-300"
-                                    >
-                                      {note}
-                                    </p>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </article>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </section>
+                  </div>
                 </div>
-              </aside>
-            </div>
+              ) : null}
+
+              {/* Q&A history */}
+              {submittedNotes.length > 0 ? (
+                <div className="mt-5 border-t border-border/30 pt-4">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Q&A ({submittedNotes.length})
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {submittedNotes.slice(0, 6).map((note) => (
+                      <div
+                        key={note.id}
+                        className="rounded-md border border-border/40 bg-muted/20 px-2.5 py-2"
+                      >
+                        <p className="text-xs font-medium text-foreground">{note.question}</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          {note.answer ?? "No answer."}
+                        </p>
+                        <p className="mt-1 text-[10px] text-muted-foreground/60">
+                          {formatSentTimestamp(note.createdAt)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </aside>
           </div>
         </section>
       </div>
@@ -1039,7 +896,7 @@ function renderPlaybackLabel({
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-border/60 bg-white/[0.03] px-3 py-2">
+    <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2">
       <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-semibold">{value}</div>
     </div>
@@ -1056,7 +913,7 @@ function ReplayMessage({
   icon: ReactNode;
 }) {
   return (
-    <div className="mt-4 rounded-xl border border-border/60 bg-white/[0.02] px-4 py-4">
+    <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 px-4 py-4">
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         {icon}
         <span>{title}</span>
@@ -1093,13 +950,6 @@ function formatTimestamp(timestamp: number) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(timestamp * 1000));
-}
-
-function formatShortDate(timestamp: number) {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
   }).format(new Date(timestamp * 1000));
 }
 
@@ -1204,10 +1054,10 @@ function semanticKindLabel(kind: SemanticHunk["kind"]) {
 function semanticKindClassName(kind: SemanticHunk["kind"]) {
   switch (kind) {
     case "annotated":
-      return "border-emerald-300/35 bg-emerald-300/[0.08] text-emerald-100";
+      return "border-chart-2/35 bg-chart-2/[0.08] text-chart-2";
     case "trivial":
-      return "border-sky-300/30 bg-sky-300/[0.08] text-sky-100";
+      return "border-chart-5/30 bg-chart-5/[0.08] text-chart-5";
     case "unavailable":
-      return "border-amber-300/30 bg-amber-300/[0.08] text-amber-100";
+      return "border-chart-3/30 bg-chart-3/[0.08] text-chart-3";
   }
 }

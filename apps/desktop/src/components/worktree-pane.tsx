@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ChevronRight,
@@ -29,6 +30,34 @@ import type {
   WorktreeTreeNode,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/use-theme";
+
+const vegaLightEditorTheme = EditorView.theme(
+  {
+    "&": {
+      backgroundColor: "var(--background)",
+      color: "var(--foreground)",
+    },
+    ".cm-gutters": {
+      backgroundColor: "var(--card)",
+      color: "var(--muted-foreground)",
+      borderRight: "1px solid var(--border)",
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "color-mix(in srgb, var(--primary) 12%, transparent)",
+    },
+    ".cm-activeLine": {
+      backgroundColor: "color-mix(in srgb, var(--primary) 6%, transparent)",
+    },
+    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+      backgroundColor: "color-mix(in srgb, var(--primary) 18%, transparent)",
+    },
+    ".cm-cursor, &.cm-focused .cm-cursor": {
+      borderLeftColor: "var(--primary)",
+    },
+  },
+  { dark: false },
+);
 
 const changeTone: Record<WorktreeChangeKind, string> = {
   added: "text-chart-2",
@@ -119,6 +148,7 @@ function TreeBranch({
 }
 
 export function WorktreePane({ workspace }: { workspace: TaskWorkspaceViewModel }) {
+  const { theme } = useTheme();
   const taskId = workspace.task.id;
   const requestIdRef = useRef(0);
 
@@ -374,7 +404,7 @@ export function WorktreePane({ workspace }: { workspace: TaskWorkspaceViewModel 
             <CodeMirror
               value={editorValue}
               height="100%"
-              theme={oneDark}
+              theme={theme === "dark" ? oneDark : vegaLightEditorTheme}
               extensions={languageExtension ? [languageExtension] : []}
               onChange={(value) => setEditorValue(value)}
               basicSetup={{

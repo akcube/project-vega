@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useTheme } from "@/hooks/use-theme";
 import { languageExtensionForPath } from "@/lib/code-language";
 import type { ReplayFrame } from "@/lib/git-replay";
 
@@ -47,65 +48,72 @@ export interface ReplayInlineCommentEntry {
   createdAt: string;
 }
 
-const replayTheme = EditorView.theme(
+const replayBaseTheme = EditorView.theme({
+  "&": {
+    height: "100%",
+    backgroundColor: "transparent",
+    color: "var(--foreground)",
+    fontSize: "14px",
+  },
+  ".cm-scroller": {
+    fontFamily:
+      '"JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+    lineHeight: "1.7",
+  },
+  ".cm-content": {
+    padding: "18px 0 28px",
+    caretColor: "var(--primary)",
+  },
+  ".cm-line": {
+    paddingLeft: "18px",
+    paddingRight: "24px",
+  },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    borderRight: "1px solid var(--border)",
+    color: "var(--muted-foreground)",
+    minWidth: "52px",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "color-mix(in srgb, var(--primary) 10%, transparent)",
+    boxShadow: "inset 3px 0 0 color-mix(in srgb, var(--primary) 60%, transparent)",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "color-mix(in srgb, var(--primary) 14%, transparent)",
+    color: "var(--foreground)",
+  },
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+    backgroundColor: "color-mix(in srgb, var(--primary) 18%, transparent)",
+  },
+  ".cm-cursor, &.cm-focused .cm-cursor, .cm-cursorLayer .cm-cursor": {
+    display: "none",
+  },
+  ".cm-panels": {
+    backgroundColor: "color-mix(in srgb, var(--card) 92%, transparent)",
+    color: "var(--foreground)",
+    borderBottom: "1px solid var(--border)",
+  },
+  ".cm-searchMatch": {
+    backgroundColor: "color-mix(in srgb, var(--chart-3) 18%, transparent)",
+    outline: "1px solid color-mix(in srgb, var(--chart-3) 28%, transparent)",
+  },
+  ".cm-searchMatch.cm-searchMatch-selected": {
+    backgroundColor: "color-mix(in srgb, var(--chart-3) 28%, transparent)",
+  },
+});
+
+const vegaLightReplayTheme = EditorView.theme(
   {
     "&": {
-      height: "100%",
-      backgroundColor: "transparent",
-      color: "var(--color-foreground)",
-      fontSize: "14px",
-    },
-    ".cm-scroller": {
-      fontFamily:
-        'var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      lineHeight: "1.7",
-    },
-    ".cm-content": {
-      padding: "18px 0 28px",
-      caretColor: "#6ee7b7",
-    },
-    ".cm-line": {
-      paddingLeft: "18px",
-      paddingRight: "24px",
+      backgroundColor: "var(--background)",
+      color: "var(--foreground)",
     },
     ".cm-gutters": {
-      backgroundColor: "transparent",
-      borderRight: "1px solid rgba(255,255,255,0.06)",
-      color: "rgba(226,232,240,0.45)",
-      minWidth: "52px",
-    },
-    ".cm-activeLine": {
-      backgroundColor: "rgba(74,222,128,0.14)",
-      boxShadow: "inset 3px 0 0 rgba(110,231,183,0.72)",
-    },
-    ".cm-activeLineGutter": {
-      backgroundColor: "rgba(74,222,128,0.18)",
-      color: "rgba(226,232,240,0.9)",
-    },
-    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-      backgroundColor: "rgba(110,231,183,0.18)",
-    },
-    ".cm-cursor, &.cm-focused .cm-cursor, .cm-cursorLayer .cm-cursor": {
-      display: "none",
-    },
-    ".cm-panels": {
-      backgroundColor: "rgba(15, 23, 42, 0.86)",
-      color: "var(--color-foreground)",
-      borderBottom: "1px solid rgba(255,255,255,0.08)",
-    },
-    ".cm-searchMatch": {
-      backgroundColor: "rgba(250, 204, 21, 0.18)",
-      outline: "1px solid rgba(250, 204, 21, 0.28)",
-    },
-    ".cm-searchMatch.cm-searchMatch-selected": {
-      backgroundColor: "rgba(250, 204, 21, 0.28)",
-    },
-    "@keyframes vegaCursorPulse": {
-      "0%, 100%": { opacity: "1" },
-      "50%": { opacity: "0.78" },
+      backgroundColor: "var(--card)",
+      color: "var(--muted-foreground)",
     },
   },
-  { dark: true },
+  { dark: false },
 );
 
 export function GitReplayEditor({
@@ -121,12 +129,14 @@ export function GitReplayEditor({
   inlineComment?: ReplayInlineComment | null;
   onLineSelect?: (selection: ReplayLineSelection) => void;
 }) {
+  const { theme } = useTheme();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const commentBoxRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartmentRef = useRef(new Compartment());
+  const themeCompartmentRef = useRef(new Compartment());
   const lineSelectRef = useRef(onLineSelect);
   const activeFilePathRef = useRef(frame.editor.activeFilePath);
 
@@ -148,8 +158,8 @@ export function GitReplayEditor({
         doc: "",
         extensions: [
           basicSetup,
-          oneDark,
-          replayTheme,
+          themeCompartmentRef.current.of(theme === "dark" ? oneDark : vegaLightReplayTheme),
+          replayBaseTheme,
           languageCompartmentRef.current.of(languageExtensionForPath(frame.editor.activeFilePath)),
           CodeMirrorState.readOnly.of(true),
           EditorView.editable.of(false),
@@ -205,6 +215,19 @@ export function GitReplayEditor({
       ),
     });
   }, [frame.editor.activeFilePath]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: themeCompartmentRef.current.reconfigure(
+        theme === "dark" ? oneDark : vegaLightReplayTheme,
+      ),
+    });
+  }, [theme]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -301,7 +324,7 @@ export function GitReplayEditor({
       {inlineComment && inlineComment.filePath === frame.editor.activeFilePath ? (
         <div
           ref={commentBoxRef}
-          className="absolute z-30 rounded-xl border border-emerald-300/25 bg-slate-950/96 p-4 text-slate-100 shadow-[0_24px_90px_rgba(0,0,0,0.42)] backdrop-blur"
+          className="absolute z-30 rounded-xl border border-primary/25 bg-card/96 p-4 text-foreground shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur"
           style={{
             opacity: 0,
             pointerEvents: "auto",
@@ -310,31 +333,31 @@ export function GitReplayEditor({
           <div className="flex flex-wrap items-center gap-2">
             <Badge
               variant="outline"
-              className="rounded-md border-emerald-300/30 bg-emerald-300/[0.08] font-mono text-[10px] text-emerald-100"
+              className="rounded-md border-primary/30 bg-primary/[0.08] font-mono text-[10px] text-primary"
             >
               {inlineComment.filePath}:{inlineComment.lineNumber}
             </Badge>
             <Badge
               variant="outline"
-              className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
+              className="rounded-md border-border/70 bg-muted/50 font-mono text-[10px]"
             >
               step {inlineComment.replayStep}/{inlineComment.replayStepCount}
             </Badge>
             <Badge
               variant="outline"
-              className="rounded-md border-border/70 bg-black/10 font-mono text-[10px]"
+              className="rounded-md border-border/70 bg-muted/50 font-mono text-[10px]"
             >
               {inlineComment.commitShortOid}
             </Badge>
           </div>
 
-          <div className="mt-3 rounded-lg border border-white/8 bg-black/30 px-3 py-2 font-mono text-xs text-slate-300">
+          <div className="mt-3 rounded-lg border border-border/40 bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">
             {inlineComment.lineText || "(blank line)"}
           </div>
 
           {inlineComment.semanticTitle ? (
-            <p className="mt-3 text-xs leading-5 text-slate-400">
-              <span className="font-medium uppercase tracking-[0.16em] text-slate-500">
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              <span className="font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
                 Semantic context
               </span>
               {" "}
@@ -348,36 +371,36 @@ export function GitReplayEditor({
               {inlineComment.thread.map((entry) => (
                 <div
                   key={entry.id}
-                  className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-3"
+                  className="rounded-xl border border-border/40 bg-muted/30 px-3 py-3"
                 >
-                  <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                  <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
                     You
                   </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-100">
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground">
                     {entry.question}
                   </p>
-                  <div className="mt-3 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                  <div className="mt-3 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
                     Agent
                   </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-300">
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                     {entry.answer ?? "The agent responded without a plain-text answer."}
                   </p>
                 </div>
               ))}
 
               {inlineComment.pendingQuestion ? (
-                <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] px-3 py-3">
-                  <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-200/80">
+                <div className="rounded-xl border border-primary/20 bg-primary/[0.05] px-3 py-3">
+                  <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-primary/80">
                     You
                   </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-100">
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground">
                     {inlineComment.pendingQuestion}
                   </p>
-                  <div className="mt-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-200/80">
+                  <div className="mt-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-primary/80">
                     <span>Agent</span>
                     <Loader2 className="h-3 w-3 animate-spin" />
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     Thinking through this line with the replay context.
                   </p>
                 </div>
@@ -389,12 +412,12 @@ export function GitReplayEditor({
             value={inlineComment.value}
             onChange={(event) => inlineComment.onChange(event.target.value)}
             placeholder="Ask what this line does, why it changed, or request a change from the agent."
-            className="mt-3 min-h-28 border-white/10 bg-black/20 text-sm text-slate-100 caret-emerald-200 placeholder:text-slate-500"
+            className="mt-3 min-h-28 border-border/40 bg-muted/40 text-sm text-foreground caret-primary placeholder:text-muted-foreground"
             disabled={inlineComment.disabled || inlineComment.sending}
           />
 
           {inlineComment.error ? (
-            <p className="mt-3 text-xs text-red-300">{inlineComment.error}</p>
+            <p className="mt-3 text-xs text-destructive">{inlineComment.error}</p>
           ) : null}
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -413,7 +436,7 @@ export function GitReplayEditor({
               size="sm"
               onClick={inlineComment.onCancel}
               disabled={inlineComment.sending}
-              className="rounded-md border-white/10 bg-white/[0.02]"
+              className="rounded-md"
             >
               Cancel
             </Button>
@@ -423,7 +446,7 @@ export function GitReplayEditor({
       <div
         ref={cursorRef}
         aria-hidden="true"
-        className="pointer-events-none absolute left-0 top-0 z-20 w-1 rounded-full bg-emerald-300 shadow-[0_0_0_1px_rgba(16,185,129,0.45),0_0_16px_rgba(110,231,183,0.8)] transition-transform duration-75 ease-out"
+        className="pointer-events-none absolute left-0 top-0 z-20 w-1 rounded-full bg-primary shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_45%,transparent),0_0_16px_color-mix(in_srgb,var(--primary)_50%,transparent)] transition-transform duration-75 ease-out"
         style={{
           height: "0px",
           opacity: 0,

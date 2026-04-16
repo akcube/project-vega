@@ -3,8 +3,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum SessionUpdate {
-    TextChunk { text: String },
-    ThinkingChunk { text: String },
+    TextChunk {
+        text: String,
+    },
+    ThinkingChunk {
+        text: String,
+    },
     #[serde(rename_all = "camelCase")]
     ToolCall {
         tool_call_id: String,
@@ -19,16 +23,24 @@ pub enum SessionUpdate {
         status: String,
         content: Vec<ToolContent>,
     },
-    Plan { entries: Vec<PlanEntry> },
+    Plan {
+        entries: Vec<PlanEntry>,
+    },
     #[serde(rename_all = "camelCase")]
-    Done { stop_reason: String },
-    Error { message: String },
+    Done {
+        stop_reason: String,
+    },
+    Error {
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ToolContent {
-    Text { text: String },
+    Text {
+        text: String,
+    },
     #[serde(rename_all = "camelCase")]
     Diff {
         path: String,

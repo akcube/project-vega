@@ -18,6 +18,8 @@ pub enum GitServiceError {
     BranchExists { branch: String },
     #[error("expected a non-bare repository at {path}")]
     BareRepository { path: PathBuf },
+    #[error("repository has no commits yet: {path}")]
+    EmptyRepository { path: PathBuf },
     #[error("could not find a commit for `{reference}`")]
     MissingReference { reference: String },
     #[error("unsupported diff targets: `{base}` -> `{target}`")]

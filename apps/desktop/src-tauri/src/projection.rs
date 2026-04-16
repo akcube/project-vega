@@ -151,9 +151,9 @@ fn append_text_segment(snapshot: &mut WorkspaceSnapshot, text: &str) {
     if let Some(current) = snapshot.current_message.as_mut() {
         match current.segments.last_mut() {
             Some(MessageSegment::Text { text: existing }) => existing.push_str(text),
-            _ => current
-                .segments
-                .push(MessageSegment::Text { text: text.to_string() }),
+            _ => current.segments.push(MessageSegment::Text {
+                text: text.to_string(),
+            }),
         }
     }
 }
@@ -167,9 +167,9 @@ fn append_thinking_segment(snapshot: &mut WorkspaceSnapshot, text: &str) {
     if let Some(current) = snapshot.current_message.as_mut() {
         match current.segments.last_mut() {
             Some(MessageSegment::Thinking { text: existing }) => existing.push_str(text),
-            _ => current
-                .segments
-                .push(MessageSegment::Thinking { text: text.to_string() }),
+            _ => current.segments.push(MessageSegment::Thinking {
+                text: text.to_string(),
+            }),
         }
     }
 }
@@ -193,7 +193,10 @@ fn finalize_current_message(snapshot: &mut WorkspaceSnapshot) {
 }
 
 fn next_message_id(snapshot: &WorkspaceSnapshot) -> String {
-    format!("msg-{}", snapshot.messages.len() + usize::from(snapshot.current_message.is_some()) + 1)
+    format!(
+        "msg-{}",
+        snapshot.messages.len() + usize::from(snapshot.current_message.is_some()) + 1
+    )
 }
 
 #[cfg(test)]

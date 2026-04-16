@@ -5,8 +5,9 @@ import "@xterm/xterm/css/xterm.css";
 
 import type { TaskWorkspaceViewModel, TerminalEvent } from "@/lib/types";
 import { useTaskStore } from "@/stores/task-store";
+import { useTheme } from "@/hooks/use-theme";
 
-const ONE_DARK_THEME = {
+const DARK_THEME = {
   background: "#282c34",
   foreground: "#abb2bf",
   cursor: "#61afef",
@@ -30,15 +31,52 @@ const ONE_DARK_THEME = {
   brightWhite: "#ffffff",
 };
 
+const LIGHT_THEME = {
+  background: "#faf6f0",
+  foreground: "#3d3329",
+  cursor: "#c8872e",
+  cursorAccent: "#faf6f0",
+  selectionBackground: "rgba(200, 135, 46, 0.18)",
+  black: "#3d3329",
+  red: "#c44040",
+  green: "#5d8a3e",
+  yellow: "#b58a2e",
+  blue: "#c8872e",
+  magenta: "#8a5db5",
+  cyan: "#3e8a8a",
+  white: "#8a7d6b",
+  brightBlack: "#8a7d6b",
+  brightRed: "#c44040",
+  brightGreen: "#5d8a3e",
+  brightYellow: "#b58a2e",
+  brightBlue: "#c8872e",
+  brightMagenta: "#8a5db5",
+  brightCyan: "#3e8a8a",
+  brightWhite: "#3d3329",
+};
+
+function terminalThemeFor(theme: "dark" | "light") {
+  return theme === "light" ? LIGHT_THEME : DARK_THEME;
+}
+
 export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel }) {
   const attachTerminal = useTaskStore((state) => state.attachTerminal);
   const writeTerminal = useTaskStore((state) => state.writeTerminal);
   const resizeTerminal = useTaskStore((state) => state.resizeTerminal);
+  const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
   const delayedFitRef = useRef<number | null>(null);
   const [status, setStatus] = useState("Connecting");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (term) {
+      term.options.theme = terminalThemeFor(theme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -46,17 +84,18 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
 
     let disposed = false;
     const term = new Terminal({
-      theme: ONE_DARK_THEME,
+      theme: terminalThemeFor(theme),
       fontFamily:
         '"JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       fontSize: 13,
-      lineHeight: 1.35,
+      lineHeight: 1.4,
       letterSpacing: 0,
       cursorBlink: true,
       cursorStyle: "bar",
       allowTransparency: false,
       scrollback: 5000,
     });
+    termRef.current = term;
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(container);
@@ -146,6 +185,7 @@ export function TerminalPane({ workspace }: { workspace: TaskWorkspaceViewModel 
       window.removeEventListener("resize", handleWindowResize);
       dataDisposable.dispose();
       term.dispose();
+      termRef.current = null;
     };
   }, [attachTerminal, resizeTerminal, workspace.task.id, workspace.task.worktreePath, writeTerminal]);
 
