@@ -7,6 +7,7 @@ use tokio::sync::mpsc;
 
 use crate::domain::{Run, RunStatus, Task, WorkspaceView};
 use crate::events::{SessionUpdate, WorkspaceEvent};
+use crate::monitor::SessionMonitor;
 use crate::projection::{apply_workspace_event, build_review_summary, rebuild_snapshot};
 use crate::session::{SessionInfo, SessionManager};
 use crate::store::Store;
@@ -21,6 +22,7 @@ pub struct WorkspaceService {
     store: Arc<Store>,
     sessions: Arc<SessionManager>,
     terminals: Arc<TerminalService>,
+    monitor: Option<Arc<SessionMonitor>>,
 }
 
 impl WorkspaceService {
@@ -33,7 +35,13 @@ impl WorkspaceService {
             store,
             sessions,
             terminals,
+            monitor: None,
         }
+    }
+
+    pub fn with_monitor(mut self, monitor: Arc<SessionMonitor>) -> Self {
+        self.monitor = Some(monitor);
+        self
     }
 
     pub fn list_active_workspaces(&self) -> Result<Vec<WorkspaceSummaryViewModel>> {
@@ -132,9 +140,21 @@ impl WorkspaceService {
         let (update_tx, mut update_rx) = mpsc::unbounded_channel::<SessionUpdate>();
         let service = self.clone();
         let task_id_owned = task_id.to_string();
+        let monitor_ref = self.monitor.clone();
+        let run_id_for_monitor = run.id.clone();
+        let task_title_for_monitor = task.title.clone();
         let processor = tokio::spawn(async move {
             while let Some(update) = update_rx.recv().await {
                 let _ = service.apply_session_update_for_task(&task_id_owned, &update);
+                // Forward to monitor for triage buffering
+                if let Some(ref monitor) = monitor_ref {
+                    monitor.on_session_update(
+                        &task_id_owned,
+                        &run_id_for_monitor,
+                        &task_title_for_monitor,
+                        &update,
+                    );
+                }
                 on_event.send(update).ok();
             }
         });
@@ -143,7 +163,20 @@ impl WorkspaceService {
         let _ = processor.await;
 
         match &result {
-            Ok(_) => self.store.update_run_status(&run.id, RunStatus::Ready)?,
+            Ok(_) => {
+                self.store.update_run_status(&run.id, RunStatus::Ready)?;
+                // Trigger completion feed entry in background
+                if let Some(ref monitor) = self.monitor {
+                    if let Ok(snapshot) = self.snapshot_for_task(task_id) {
+                        monitor.on_session_completed(
+                            task_id.to_string(),
+                            run.id.clone(),
+                            task.title.clone(),
+                            &snapshot,
+                        );
+                    }
+                }
+            }
             Err(_) => self.store.update_run_status(&run.id, RunStatus::Failed)?,
         }
 

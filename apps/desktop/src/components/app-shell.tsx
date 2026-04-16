@@ -1,9 +1,11 @@
-import { Activity, KanbanSquare, Moon, Sparkles, Sun } from "lucide-react";
+import { Activity, Bell, KanbanSquare, Moon, Sparkles, Sun } from "lucide-react";
 
 import { ActiveWorkspacesScreen } from "@/components/active-workspaces-screen";
+import { FeedScreen } from "@/components/feed-screen";
 import { ProjectsScreen } from "@/components/projects-screen";
 import { cn } from "@/lib/utils";
 import { useTaskStore } from "@/stores/task-store";
+import { useFeedStore } from "@/stores/feed-store";
 import { useTheme } from "@/hooks/use-theme";
 
 export function AppShell() {
@@ -11,6 +13,7 @@ export function AppShell() {
   const setMode = useTaskStore((state) => state.setMode);
   const activeWorkspaces = useTaskStore((state) => state.activeWorkspaces);
   const isBootstrapping = useTaskStore((state) => state.isBootstrapping);
+  const unreadCount = useFeedStore((state) => state.unreadCount);
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -49,6 +52,24 @@ export function AppShell() {
               </button>
               <button
                 type="button"
+                onClick={() => setMode("feed")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all duration-150",
+                  mode === "feed"
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Bell className="h-3 w-3" />
+                Feed
+                {unreadCount > 0 && (
+                  <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-chart-3/20 px-1 text-[10px] font-semibold text-chart-3">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
                 onClick={() => setMode("workspaces")}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all duration-150",
@@ -84,7 +105,6 @@ export function AppShell() {
           {isBootstrapping ? (
             <div className="flex h-full items-center justify-center">
               <div className="flex flex-col items-center gap-3">
-                {/* SVG spinner */}
                 <svg
                   className="h-8 w-8"
                   viewBox="0 0 50 50"
@@ -121,6 +141,8 @@ export function AppShell() {
             </div>
           ) : mode === "projects" ? (
             <ProjectsScreen />
+          ) : mode === "feed" ? (
+            <FeedScreen />
           ) : (
             <ActiveWorkspacesScreen />
           )}

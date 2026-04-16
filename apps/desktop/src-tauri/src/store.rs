@@ -15,9 +15,10 @@ use crate::domain::{
     WorkspaceView,
 };
 use crate::events::WorkspaceEvent;
+use crate::feed::{FeedEntry, FeedEntryKind};
 use crate::view_model::WorkspaceSnapshot;
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
 pub struct Store {
     conn: Mutex<Connection>,
@@ -607,6 +608,75 @@ impl Store {
             .execute("DELETE FROM active_workspaces WHERE task_id = ?1", [task_id])?;
         Ok(())
     }
+
+    // ── Feed entries ──────────────────────────────────────────────────────
+
+    pub fn insert_feed_entry(&self, entry: &FeedEntry) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            r#"INSERT INTO feed_entries (id, task_id, run_id, kind, severity, title, summary, category, recommended_action, is_read, created_at)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"#,
+            params![
+                entry.id,
+                entry.task_id,
+                entry.run_id,
+                entry.kind.as_str(),
+                entry.severity,
+                entry.title,
+                entry.summary,
+                entry.category,
+                entry.recommended_action,
+                entry.is_read as i32,
+                entry.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_feed_entries(&self, limit: i64) -> Result<Vec<FeedEntry>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT * FROM feed_entries ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let entries = stmt
+            .query_map([limit], |row| {
+                Ok(FeedEntry {
+                    id: row.get("id")?,
+                    task_id: row.get("task_id")?,
+                    run_id: row.get("run_id")?,
+                    kind: FeedEntryKind::from_str(&row.get::<_, String>("kind")?)
+                        .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?,
+                    severity: row.get("severity")?,
+                    title: row.get("title")?,
+                    summary: row.get("summary")?,
+                    category: row.get("category")?,
+                    recommended_action: row.get("recommended_action")?,
+                    is_read: row.get::<_, i32>("is_read")? != 0,
+                    created_at: row.get("created_at")?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(entries)
+    }
+
+    pub fn mark_feed_entry_read(&self, entry_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE feed_entries SET is_read = 1 WHERE id = ?1",
+            [entry_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn count_unread_feed_entries(&self) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM feed_entries WHERE is_read = 0",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(count)
+    }
 }
 
 fn project_from_row(row: &Row<'_>) -> rusqlite::Result<Project> {
@@ -683,6 +753,7 @@ fn run_from_row(row: &Row<'_>) -> rusqlite::Result<Run> {
 }
 
 fn delete_task_records(tx: &Transaction<'_>, task_id: &str) -> Result<()> {
+    tx.execute("DELETE FROM feed_entries WHERE task_id = ?1", [task_id])?;
     tx.execute("DELETE FROM active_workspaces WHERE task_id = ?1", [task_id])?;
     tx.execute("DELETE FROM workspace_snapshots WHERE task_id = ?1", [task_id])?;
     tx.execute("DELETE FROM task_events WHERE task_id = ?1", [task_id])?;
@@ -770,6 +841,20 @@ fn apply_migrations(conn: &Connection) -> Result<()> {
             selected_view TEXT NOT NULL,
             strip_order INTEGER NOT NULL,
             last_focused_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS feed_entries (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            run_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            severity INTEGER NOT NULL DEFAULT 0,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT '',
+            recommended_action TEXT NOT NULL DEFAULT '',
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
         );
         "#,
     )?;

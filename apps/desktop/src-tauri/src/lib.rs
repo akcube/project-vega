@@ -2,7 +2,9 @@ mod catalog_service;
 mod commands;
 mod domain;
 mod events;
+mod feed;
 mod git_commands;
+mod monitor;
 mod projection;
 mod session;
 mod store;
@@ -13,6 +15,7 @@ mod workspace_service;
 use std::sync::Arc;
 
 use catalog_service::CatalogService;
+use monitor::SessionMonitor;
 use session::SessionManager;
 use store::Store;
 use tauri::Manager;
@@ -22,6 +25,7 @@ use workspace_service::WorkspaceService;
 pub struct AppState {
     pub catalog: CatalogService,
     pub workspace: WorkspaceService,
+    pub store: Arc<Store>,
 }
 
 pub fn run() {
@@ -34,9 +38,15 @@ pub fn run() {
             let sessions = Arc::new(SessionManager::new(home_dir));
             let terminals = Arc::new(TerminalService::new());
             let catalog = CatalogService::new(store.clone(), sessions.clone(), terminals.clone());
-            let workspace = WorkspaceService::new(store, sessions, terminals);
+            let monitor = Arc::new(SessionMonitor::new(store.clone(), app.handle().clone()));
+            let workspace = WorkspaceService::new(store.clone(), sessions, terminals)
+                .with_monitor(monitor);
 
-            app.manage(AppState { catalog, workspace });
+            app.manage(AppState {
+                catalog,
+                workspace,
+                store: store.clone(),
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -57,6 +67,9 @@ pub fn run() {
             commands::resize_terminal,
             commands::send_prompt,
             commands::cancel_run,
+            commands::list_feed_entries,
+            commands::mark_feed_entry_read,
+            commands::count_unread_feed_entries,
             git_commands::load_commit_history,
             git_commands::load_commit_diff,
             git_commands::load_commit_replay,
