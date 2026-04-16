@@ -75,18 +75,33 @@ async fn llm_call(api_key: &str, system: &str, user: &str) -> anyhow::Result<Str
         .ok_or_else(|| anyhow::anyhow!("empty LLM response"))
 }
 
-// ── Tool call buffer entry ────────────────────────────────────────────
+// ── Tool call buffer ──────────────────────────────────────────────────
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ToolCallEntry {
     title: String,
     kind: String,
 }
 
+#[derive(Debug)]
 struct TaskBuffer {
+    /// Tool calls seen (buffered on initial ToolCall event).
     tool_calls: Vec<ToolCallEntry>,
+    /// How many tool calls have completed (via ToolCallUpdate status="completed").
+    completed_count: usize,
     run_id: String,
     task_title: String,
+}
+
+impl TaskBuffer {
+    fn new(run_id: String, task_title: String) -> Self {
+        Self {
+            tool_calls: Vec::new(),
+            completed_count: 0,
+            run_id,
+            task_title,
+        }
+    }
 }
 
 // ── SessionMonitor ────────────────────────────────────────────────────
@@ -108,6 +123,7 @@ impl SessionMonitor {
 
     /// Called after send_prompt completes successfully. Spawns a background task
     /// to generate an LLM summary and create a completion feed entry.
+    /// Also flushes any remaining triage buffer for this task.
     pub fn on_session_completed(
         &self,
         task_id: String,
@@ -115,6 +131,9 @@ impl SessionMonitor {
         task_title: String,
         snapshot: &WorkspaceSnapshot,
     ) {
+        // Flush remaining buffered tool calls through triage before summary
+        self.flush_triage(&task_id);
+
         let transcript = extract_transcript(snapshot);
         let store = self.store.clone();
         let app_handle = self.app_handle.clone();
@@ -162,8 +181,9 @@ impl SessionMonitor {
         });
     }
 
-    /// Called on every session update. Buffers tool call completions and
-    /// triggers triage analysis when the batch is full.
+    /// Called on every session update during streaming.
+    /// Buffers tool call info on initial ToolCall events, tracks completions
+    /// via ToolCallUpdate, and triggers triage when batch is full.
     pub fn on_session_update(
         &self,
         task_id: &str,
@@ -171,39 +191,33 @@ impl SessionMonitor {
         task_title: &str,
         update: &SessionUpdate,
     ) {
-        // Buffer completed tool calls
         let should_triage = match update {
+            // Buffer the tool call on initial arrival (captures title + kind)
             SessionUpdate::ToolCall {
-                title,
-                kind,
-                status,
-                ..
-            } if status == "completed" => {
+                title, kind, ..
+            } => {
                 let mut buffers = self.buffers.lock().unwrap();
-                let buf = buffers.entry(task_id.to_string()).or_insert_with(|| {
-                    TaskBuffer {
-                        tool_calls: Vec::new(),
-                        run_id: run_id.to_string(),
-                        task_title: task_title.to_string(),
-                    }
-                });
+                let buf = buffers
+                    .entry(task_id.to_string())
+                    .or_insert_with(|| TaskBuffer::new(run_id.to_string(), task_title.to_string()));
                 buf.tool_calls.push(ToolCallEntry {
                     title: title.clone(),
                     kind: kind.clone(),
                 });
-                buf.tool_calls.len() >= TRIAGE_BATCH_SIZE
+                false // Don't triage yet — wait for completion
             }
-            SessionUpdate::ToolCallUpdate {
-                tool_call_id: _,
-                status,
-                content: _,
-            } if status == "completed" => {
-                // ToolCallUpdate with completed status — check buffer size
-                let buffers = self.buffers.lock().unwrap();
-                buffers
-                    .get(task_id)
-                    .is_some_and(|b| b.tool_calls.len() >= TRIAGE_BATCH_SIZE)
+
+            // Track completion and check if we should triage
+            SessionUpdate::ToolCallUpdate { status, .. } if status == "completed" => {
+                let mut buffers = self.buffers.lock().unwrap();
+                if let Some(buf) = buffers.get_mut(task_id) {
+                    buf.completed_count += 1;
+                    buf.completed_count >= TRIAGE_BATCH_SIZE
+                } else {
+                    false
+                }
             }
+
             _ => false,
         };
 
@@ -267,9 +281,17 @@ impl SessionMonitor {
                 }
             };
 
-            let needs_review = triage_text.to_lowercase().contains("needs_review: yes")
-                || (triage_text.to_lowercase().contains("yes")
-                    && !triage_text.to_lowercase().contains("no"));
+            // Parse needs_review — look for the structured "needs_review: yes" first,
+            // then fall back to heuristic
+            let lower = triage_text.to_lowercase();
+            let needs_review = if lower.contains("needs_review: yes") {
+                true
+            } else if lower.contains("needs_review: no") {
+                false
+            } else {
+                // Heuristic fallback: contains "yes" without "no"
+                lower.contains("yes") && !lower.contains("no")
+            };
 
             if !needs_review {
                 return;
@@ -292,9 +314,7 @@ impl SessionMonitor {
                  title: <one-line alert title>\n\
                  explanation: <2-3 sentence explanation>\n\
                  action: <recommended action>",
-                &format!(
-                    "Category: {category}\n\nAgent activity:\n{transcript}"
-                ),
+                &format!("Category: {category}\n\nAgent activity:\n{transcript}"),
             )
             .await;
 
@@ -381,5 +401,157 @@ fn extract_transcript(snapshot: &WorkspaceSnapshot) -> String {
         full[full.len() - 3000..].to_string()
     } else {
         full
+    }
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::view_model::{ChatMessage, MessageSegment, ToolCallState, WorkspaceSnapshot};
+    use crate::events::ToolContent;
+
+    #[test]
+    fn extract_transcript_builds_readable_text() {
+        let snapshot = WorkspaceSnapshot {
+            messages: vec![
+                ChatMessage {
+                    id: "1".into(),
+                    role: "user".into(),
+                    segments: vec![MessageSegment::Text {
+                        text: "Fix the auth bug".into(),
+                    }],
+                },
+                ChatMessage {
+                    id: "2".into(),
+                    role: "assistant".into(),
+                    segments: vec![
+                        MessageSegment::ToolCall {
+                            tool_call: ToolCallState {
+                                id: "tc1".into(),
+                                title: "Read src/auth.rs".into(),
+                                kind: "read".into(),
+                                status: "completed".into(),
+                                content: vec![],
+                            },
+                        },
+                        MessageSegment::ToolCall {
+                            tool_call: ToolCallState {
+                                id: "tc2".into(),
+                                title: "Edit src/auth.rs".into(),
+                                kind: "edit".into(),
+                                status: "completed".into(),
+                                content: vec![],
+                            },
+                        },
+                        MessageSegment::Text {
+                            text: "Fixed the authentication check.".into(),
+                        },
+                    ],
+                },
+            ],
+            current_message: None,
+        };
+
+        let transcript = extract_transcript(&snapshot);
+        assert!(transcript.contains("[User] Fix the auth bug"));
+        assert!(transcript.contains("[Tool: read] Read src/auth.rs"));
+        assert!(transcript.contains("[Tool: edit] Edit src/auth.rs"));
+        assert!(transcript.contains("[Assistant] Fixed the authentication check."));
+    }
+
+    #[test]
+    fn extract_transcript_truncates_long_content() {
+        let long_text = "x".repeat(5000);
+        let snapshot = WorkspaceSnapshot {
+            messages: vec![ChatMessage {
+                id: "1".into(),
+                role: "assistant".into(),
+                segments: vec![MessageSegment::Text { text: long_text }],
+            }],
+            current_message: None,
+        };
+
+        let transcript = extract_transcript(&snapshot);
+        assert!(transcript.len() <= 3000);
+    }
+
+    #[test]
+    fn extract_transcript_empty_snapshot() {
+        let snapshot = WorkspaceSnapshot {
+            messages: vec![],
+            current_message: None,
+        };
+        let transcript = extract_transcript(&snapshot);
+        assert!(transcript.is_empty());
+    }
+
+    #[test]
+    fn task_buffer_tracks_completions() {
+        let mut buf = TaskBuffer::new("run1".into(), "Test task".into());
+        assert_eq!(buf.completed_count, 0);
+        assert!(buf.tool_calls.is_empty());
+
+        buf.tool_calls.push(ToolCallEntry {
+            title: "Read file".into(),
+            kind: "read".into(),
+        });
+        buf.tool_calls.push(ToolCallEntry {
+            title: "Edit file".into(),
+            kind: "edit".into(),
+        });
+        buf.completed_count = 2;
+
+        assert_eq!(buf.tool_calls.len(), 2);
+        assert_eq!(buf.completed_count, 2);
+        assert!(buf.completed_count < TRIAGE_BATCH_SIZE);
+
+        buf.tool_calls.push(ToolCallEntry {
+            title: "Execute test".into(),
+            kind: "execute".into(),
+        });
+        buf.completed_count = 3;
+        assert!(buf.completed_count >= TRIAGE_BATCH_SIZE);
+    }
+
+    #[test]
+    fn triage_parsing_detects_review_needed() {
+        let response = "needs_review: yes\ncategory: test_manipulation";
+        let lower = response.to_lowercase();
+        assert!(lower.contains("needs_review: yes"));
+
+        let response_no = "needs_review: no\ncategory: none";
+        let lower_no = response_no.to_lowercase();
+        assert!(lower_no.contains("needs_review: no"));
+        assert!(!lower_no.contains("needs_review: yes"));
+    }
+
+    #[test]
+    fn alert_field_parsing() {
+        let alert_text = "severity: 4\ntitle: Test Deletion Detected\nexplanation: The agent deleted 3 test functions.\naction: Pause agent and review diff";
+
+        let get_field = |prefix: &str| -> String {
+            alert_text
+                .lines()
+                .find(|l| l.to_lowercase().starts_with(prefix))
+                .and_then(|l| l.split_once(':').map(|(_, v)| v.trim().to_string()))
+                .unwrap_or_default()
+        };
+
+        assert_eq!(get_field("severity"), "4");
+        assert_eq!(get_field("title"), "Test Deletion Detected");
+        assert_eq!(
+            get_field("explanation"),
+            "The agent deleted 3 test functions."
+        );
+        assert_eq!(get_field("action"), "Pause agent and review diff");
+
+        let severity: i32 = get_field("severity")
+            .chars()
+            .find(|c| c.is_ascii_digit())
+            .and_then(|c| c.to_digit(10))
+            .unwrap_or(3) as i32;
+        assert_eq!(severity, 4);
     }
 }

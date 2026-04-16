@@ -1129,4 +1129,75 @@ mod tests {
         let active = store.list_active_workspaces().unwrap();
         assert_eq!(active.len(), 1);
     }
+
+    #[test]
+    fn feed_entries_crud() {
+        let temp = tempdir().unwrap();
+        let store = Store::new(temp.path()).unwrap();
+
+        // Initially empty
+        let entries = store.list_feed_entries(100).unwrap();
+        assert!(entries.is_empty());
+        assert_eq!(store.count_unread_feed_entries().unwrap(), 0);
+
+        // Insert a completion entry
+        let entry1 = FeedEntry {
+            id: "feed-1".to_string(),
+            task_id: "task-1".to_string(),
+            run_id: "run-1".to_string(),
+            kind: FeedEntryKind::Completion,
+            severity: 0,
+            title: "Fix auth bug".to_string(),
+            summary: "Fixed the authentication check in auth.rs".to_string(),
+            category: String::new(),
+            recommended_action: String::new(),
+            is_read: false,
+            created_at: "2026-04-16T10:00:00Z".to_string(),
+        };
+        store.insert_feed_entry(&entry1).unwrap();
+
+        // Insert an alert entry
+        let entry2 = FeedEntry {
+            id: "feed-2".to_string(),
+            task_id: "task-1".to_string(),
+            run_id: "run-1".to_string(),
+            kind: FeedEntryKind::Alert,
+            severity: 4,
+            title: "Test Deletion Detected".to_string(),
+            summary: "Agent deleted 3 test functions".to_string(),
+            category: "test_manipulation".to_string(),
+            recommended_action: "Pause and review".to_string(),
+            is_read: false,
+            created_at: "2026-04-16T10:01:00Z".to_string(),
+        };
+        store.insert_feed_entry(&entry2).unwrap();
+
+        // List returns both, newest first
+        let entries = store.list_feed_entries(100).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "feed-2"); // newer
+        assert_eq!(entries[1].id, "feed-1");
+
+        // Unread count
+        assert_eq!(store.count_unread_feed_entries().unwrap(), 2);
+
+        // Mark one as read
+        store.mark_feed_entry_read("feed-1").unwrap();
+        assert_eq!(store.count_unread_feed_entries().unwrap(), 1);
+
+        // Verify read status
+        let entries = store.list_feed_entries(100).unwrap();
+        assert!(entries.iter().find(|e| e.id == "feed-1").unwrap().is_read);
+        assert!(!entries.iter().find(|e| e.id == "feed-2").unwrap().is_read);
+
+        // Verify kind round-trip
+        assert_eq!(entries.iter().find(|e| e.id == "feed-1").unwrap().kind, FeedEntryKind::Completion);
+        assert_eq!(entries.iter().find(|e| e.id == "feed-2").unwrap().kind, FeedEntryKind::Alert);
+        assert_eq!(entries.iter().find(|e| e.id == "feed-2").unwrap().severity, 4);
+        assert_eq!(entries.iter().find(|e| e.id == "feed-2").unwrap().category, "test_manipulation");
+
+        // Limit works
+        let limited = store.list_feed_entries(1).unwrap();
+        assert_eq!(limited.len(), 1);
+    }
 }
