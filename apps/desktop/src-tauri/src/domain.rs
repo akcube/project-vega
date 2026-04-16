@@ -84,7 +84,7 @@ impl ProjectLifecycleState {
 pub enum WorkflowState {
     Todo,
     InProgress,
-    Blocked,
+    InReview,
     Completed,
 }
 
@@ -93,7 +93,7 @@ impl WorkflowState {
         match self {
             Self::Todo => "todo",
             Self::InProgress => "in_progress",
-            Self::Blocked => "blocked",
+            Self::InReview => "in_review",
             Self::Completed => "completed",
         }
     }
@@ -102,21 +102,21 @@ impl WorkflowState {
         match value {
             "todo" => Ok(Self::Todo),
             "in_progress" => Ok(Self::InProgress),
-            "blocked" => Ok(Self::Blocked),
+            "in_review" => Ok(Self::InReview),
             "completed" => Ok(Self::Completed),
             other => anyhow::bail!("unknown workflow state: {other}"),
         }
     }
 
     pub fn ordered() -> [Self; 4] {
-        [Self::Todo, Self::InProgress, Self::Blocked, Self::Completed]
+        [Self::Todo, Self::InProgress, Self::InReview, Self::Completed]
     }
 
     pub fn label(&self) -> &'static str {
         match self {
             Self::Todo => "Todo",
             Self::InProgress => "In Progress",
-            Self::Blocked => "In Review",
+            Self::InReview => "In Review",
             Self::Completed => "Completed",
         }
     }

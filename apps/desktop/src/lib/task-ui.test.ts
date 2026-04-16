@@ -20,7 +20,7 @@ describe("task ui helpers", () => {
   });
 
   it("keeps the workflow state ordering stable", () => {
-    expect(WORKFLOW_STATES).toEqual(["todo", "in_progress", "blocked", "completed"]);
-    expect(stateLabel("blocked")).toBe("In Review");
+    expect(WORKFLOW_STATES).toEqual(["todo", "in_progress", "in_review", "completed"]);
+    expect(stateLabel("in_review")).toBe("In Review");
   });
 });

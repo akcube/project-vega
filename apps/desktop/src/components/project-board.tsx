@@ -19,7 +19,7 @@ interface ProjectBoardProps {
 const columnDot: Record<string, string> = {
   todo: "bg-[#5c6370]",
   in_progress: "bg-[#98c379]",
-  blocked: "bg-[#e5c07b]",
+  in_review: "bg-[#e5c07b]",
   completed: "bg-[#56b6c2]",
 };
 

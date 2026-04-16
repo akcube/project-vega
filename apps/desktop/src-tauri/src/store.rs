@@ -17,7 +17,7 @@ use crate::domain::{
 use crate::events::WorkspaceEvent;
 use crate::view_model::WorkspaceSnapshot;
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 pub struct Store {
     conn: Mutex<Connection>,
@@ -829,12 +829,17 @@ fn apply_migrations(conn: &Connection) -> Result<()> {
         UPDATE tasks
         SET workflow_state = CASE status
             WHEN 'running' THEN 'in_progress'
-            WHEN 'cancelled' THEN 'blocked'
-            WHEN 'failed' THEN 'blocked'
+            WHEN 'cancelled' THEN 'in_review'
+            WHEN 'failed' THEN 'in_review'
             ELSE 'todo'
         END
         WHERE workflow_state IS NULL OR workflow_state = ''
         "#,
+        [],
+    )?;
+
+    conn.execute(
+        "UPDATE tasks SET workflow_state = 'in_review' WHERE workflow_state = 'blocked'",
         [],
     )?;
 

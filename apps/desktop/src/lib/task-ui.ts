@@ -3,7 +3,7 @@ import type { Provider, ProjectResource, WorkflowState, WorkspaceView } from "@/
 export const WORKFLOW_STATES: WorkflowState[] = [
   "todo",
   "in_progress",
-  "blocked",
+  "in_review",
   "completed",
 ];
 
@@ -27,7 +27,7 @@ export const WORKFLOW_STATE_META: Record<
     tone: "border-emerald-500/35 bg-emerald-500/12 text-emerald-100",
     panelTone: "bg-emerald-500/8",
   },
-  blocked: {
+  in_review: {
     label: "In Review",
     tone: "border-amber-500/35 bg-amber-500/12 text-amber-100",
     panelTone: "bg-amber-500/8",

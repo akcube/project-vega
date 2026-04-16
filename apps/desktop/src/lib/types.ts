@@ -1,7 +1,7 @@
 export type Provider = "Claude" | "Codex";
 export type ProjectResourceKind = "repo" | "doc";
 export type ProjectLifecycleState = "active" | "archived";
-export type WorkflowState = "todo" | "in_progress" | "blocked" | "completed";
+export type WorkflowState = "todo" | "in_progress" | "in_review" | "completed";
 export type RunStatus = "ready" | "streaming" | "cancelled" | "failed";
 export type WorkspaceView = "agent" | "terminal" | "review";
 export type AppMode = "projects" | "workspaces";
