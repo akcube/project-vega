@@ -4,7 +4,7 @@ export type ProjectLifecycleState = "active" | "archived";
 export type WorkflowState = "todo" | "in_progress" | "in_review" | "completed";
 export type RunStatus = "ready" | "streaming" | "cancelled" | "failed";
 export type WorkspaceView = "agent" | "files" | "terminal" | "review";
-export type AppMode = "projects" | "workspaces";
+export type AppMode = "projects" | "feed" | "workspaces";
 export type WorktreeNodeKind = "directory" | "file";
 export type WorktreeChangeKind =
   | "added"
@@ -13,6 +13,22 @@ export type WorktreeChangeKind =
   | "renamed"
   | "copied"
   | "typechange";
+
+export type FeedEntryKind = "completion" | "alert";
+
+export interface FeedEntry {
+  id: string;
+  taskId: string;
+  runId: string;
+  kind: FeedEntryKind;
+  severity: number;
+  title: string;
+  summary: string;
+  category: string;
+  recommendedAction: string;
+  isRead: boolean;
+  createdAt: string;
+}
 
 export interface Project {
   id: string;

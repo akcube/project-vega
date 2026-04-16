@@ -15,9 +15,10 @@ use crate::domain::{
     WorkspaceView,
 };
 use crate::events::WorkspaceEvent;
+use crate::feed::{FeedEntry, FeedEntryKind};
 use crate::view_model::WorkspaceSnapshot;
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
 pub struct Store {
     conn: Mutex<Connection>,
@@ -605,6 +606,75 @@ impl Store {
         )?;
         Ok(())
     }
+
+    // ── Feed entries ──────────────────────────────────────────────────────
+
+    pub fn insert_feed_entry(&self, entry: &FeedEntry) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            r#"INSERT INTO feed_entries (id, task_id, run_id, kind, severity, title, summary, category, recommended_action, is_read, created_at)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"#,
+            params![
+                entry.id,
+                entry.task_id,
+                entry.run_id,
+                entry.kind.as_str(),
+                entry.severity,
+                entry.title,
+                entry.summary,
+                entry.category,
+                entry.recommended_action,
+                entry.is_read as i32,
+                entry.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_feed_entries(&self, limit: i64) -> Result<Vec<FeedEntry>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT * FROM feed_entries ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let entries = stmt
+            .query_map([limit], |row| {
+                Ok(FeedEntry {
+                    id: row.get("id")?,
+                    task_id: row.get("task_id")?,
+                    run_id: row.get("run_id")?,
+                    kind: FeedEntryKind::from_str(&row.get::<_, String>("kind")?)
+                        .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?,
+                    severity: row.get("severity")?,
+                    title: row.get("title")?,
+                    summary: row.get("summary")?,
+                    category: row.get("category")?,
+                    recommended_action: row.get("recommended_action")?,
+                    is_read: row.get::<_, i32>("is_read")? != 0,
+                    created_at: row.get("created_at")?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(entries)
+    }
+
+    pub fn mark_feed_entry_read(&self, entry_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE feed_entries SET is_read = 1 WHERE id = ?1",
+            [entry_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn count_unread_feed_entries(&self) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM feed_entries WHERE is_read = 0",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(count)
+    }
 }
 
 fn project_from_row(row: &Row<'_>) -> rusqlite::Result<Project> {
@@ -685,6 +755,10 @@ fn run_from_row(row: &Row<'_>) -> rusqlite::Result<Run> {
 }
 
 fn delete_task_records(tx: &Transaction<'_>, task_id: &str) -> Result<()> {
+    tx.execute(
+        "DELETE FROM feed_entries WHERE task_id = ?1",
+        [task_id],
+    )?;
     tx.execute(
         "DELETE FROM active_workspaces WHERE task_id = ?1",
         [task_id],
@@ -778,6 +852,20 @@ fn apply_migrations(conn: &Connection) -> Result<()> {
             selected_view TEXT NOT NULL,
             strip_order INTEGER NOT NULL,
             last_focused_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS feed_entries (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            run_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            severity INTEGER NOT NULL DEFAULT 0,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT '',
+            recommended_action TEXT NOT NULL DEFAULT '',
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
         );
         "#,
     )?;
@@ -1065,5 +1153,76 @@ mod tests {
 
         let active = store.list_active_workspaces().unwrap();
         assert_eq!(active.len(), 1);
+    }
+
+    #[test]
+    fn feed_entries_crud() {
+        let temp = tempdir().unwrap();
+        let store = Store::new(temp.path()).unwrap();
+
+        // Initially empty
+        let entries = store.list_feed_entries(100).unwrap();
+        assert!(entries.is_empty());
+        assert_eq!(store.count_unread_feed_entries().unwrap(), 0);
+
+        // Insert a completion entry
+        let entry1 = FeedEntry {
+            id: "feed-1".to_string(),
+            task_id: "task-1".to_string(),
+            run_id: "run-1".to_string(),
+            kind: FeedEntryKind::Completion,
+            severity: 0,
+            title: "Fix auth bug".to_string(),
+            summary: "Fixed the authentication check in auth.rs".to_string(),
+            category: String::new(),
+            recommended_action: String::new(),
+            is_read: false,
+            created_at: "2026-04-16T10:00:00Z".to_string(),
+        };
+        store.insert_feed_entry(&entry1).unwrap();
+
+        // Insert an alert entry
+        let entry2 = FeedEntry {
+            id: "feed-2".to_string(),
+            task_id: "task-1".to_string(),
+            run_id: "run-1".to_string(),
+            kind: FeedEntryKind::Alert,
+            severity: 4,
+            title: "Test Deletion Detected".to_string(),
+            summary: "Agent deleted 3 test functions".to_string(),
+            category: "test_manipulation".to_string(),
+            recommended_action: "Pause and review".to_string(),
+            is_read: false,
+            created_at: "2026-04-16T10:01:00Z".to_string(),
+        };
+        store.insert_feed_entry(&entry2).unwrap();
+
+        // List returns both, newest first
+        let entries = store.list_feed_entries(100).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "feed-2"); // newer
+        assert_eq!(entries[1].id, "feed-1");
+
+        // Unread count
+        assert_eq!(store.count_unread_feed_entries().unwrap(), 2);
+
+        // Mark one as read
+        store.mark_feed_entry_read("feed-1").unwrap();
+        assert_eq!(store.count_unread_feed_entries().unwrap(), 1);
+
+        // Verify read status
+        let entries = store.list_feed_entries(100).unwrap();
+        assert!(entries.iter().find(|e| e.id == "feed-1").unwrap().is_read);
+        assert!(!entries.iter().find(|e| e.id == "feed-2").unwrap().is_read);
+
+        // Verify kind round-trip
+        assert_eq!(entries.iter().find(|e| e.id == "feed-1").unwrap().kind, FeedEntryKind::Completion);
+        assert_eq!(entries.iter().find(|e| e.id == "feed-2").unwrap().kind, FeedEntryKind::Alert);
+        assert_eq!(entries.iter().find(|e| e.id == "feed-2").unwrap().severity, 4);
+        assert_eq!(entries.iter().find(|e| e.id == "feed-2").unwrap().category, "test_manipulation");
+
+        // Limit works
+        let limited = store.list_feed_entries(1).unwrap();
+        assert_eq!(limited.len(), 1);
     }
 }

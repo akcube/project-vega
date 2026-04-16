@@ -8,6 +8,7 @@ use crate::domain::{
     WorkspaceView,
 };
 use crate::events::SessionUpdate;
+use crate::feed::FeedEntry;
 use crate::project_planner;
 use crate::view_model::{
     ProjectBoardViewModel, TaskWorkspaceViewModel, TerminalEvent, TerminalSnapshot,
@@ -243,5 +244,37 @@ pub async fn cancel_run(state: State<'_, AppState>, task_id: String) -> Result<(
         .workspace
         .cancel_run(&task_id)
         .await
+        .map_err(|error| error.to_string())
+}
+
+// ── Feed commands ─────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn list_feed_entries(
+    state: State<'_, AppState>,
+    limit: i64,
+) -> Result<Vec<FeedEntry>, String> {
+    state
+        .store
+        .list_feed_entries(limit)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn mark_feed_entry_read(
+    state: State<'_, AppState>,
+    entry_id: String,
+) -> Result<(), String> {
+    state
+        .store
+        .mark_feed_entry_read(&entry_id)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn count_unread_feed_entries(state: State<'_, AppState>) -> Result<i64, String> {
+    state
+        .store
+        .count_unread_feed_entries()
         .map_err(|error| error.to_string())
 }
