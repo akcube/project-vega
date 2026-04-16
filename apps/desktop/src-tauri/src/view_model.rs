@@ -15,8 +15,12 @@ pub struct ToolCallState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum MessageSegment {
-    Text { text: String },
-    Thinking { text: String },
+    Text {
+        text: String,
+    },
+    Thinking {
+        text: String,
+    },
     ToolCall {
         #[serde(rename = "toolCall", alias = "tool_call")]
         tool_call: ToolCallState,

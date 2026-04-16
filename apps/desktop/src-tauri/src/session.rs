@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
@@ -195,17 +195,14 @@ impl SessionManager {
             provider_session_id,
         ));
 
-        self.sessions
-            .lock()
-            .unwrap()
-            .insert(
-                task_id,
-                TaskSession {
-                    cmd_tx,
-                    info: info.clone(),
-                    capabilities,
-                },
-            );
+        self.sessions.lock().unwrap().insert(
+            task_id,
+            TaskSession {
+                cmd_tx,
+                info: info.clone(),
+                capabilities,
+            },
+        );
 
         Ok(info)
     }
@@ -710,33 +707,35 @@ fn parse_tool_content(update: &serde_json::Value) -> Vec<ToolContent> {
 
     items
         .iter()
-        .filter_map(|item| match item.get("type").and_then(|value| value.as_str()) {
-            Some("diff") => Some(ToolContent::Diff {
-                path: jstr(item, "path"),
-                old_text: item
-                    .get("oldText")
-                    .and_then(|value| value.as_str())
-                    .map(str::to_string),
-                new_text: jstr(item, "newText"),
-            }),
-            Some("content") => Some(ToolContent::Text {
-                text: item
-                    .get("content")
-                    .and_then(|content| content.get("text"))
-                    .and_then(|value| value.as_str())
-                    .unwrap_or_default()
-                    .to_string(),
-            }),
-            Some("terminal") => Some(ToolContent::Text {
-                text: format!("[terminal: {}]", jstr(item, "terminalId")),
-            }),
-            _ => item
-                .get("text")
-                .and_then(|value| value.as_str())
-                .map(|text| ToolContent::Text {
-                    text: text.to_string(),
+        .filter_map(
+            |item| match item.get("type").and_then(|value| value.as_str()) {
+                Some("diff") => Some(ToolContent::Diff {
+                    path: jstr(item, "path"),
+                    old_text: item
+                        .get("oldText")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_string),
+                    new_text: jstr(item, "newText"),
                 }),
-        })
+                Some("content") => Some(ToolContent::Text {
+                    text: item
+                        .get("content")
+                        .and_then(|content| content.get("text"))
+                        .and_then(|value| value.as_str())
+                        .unwrap_or_default()
+                        .to_string(),
+                }),
+                Some("terminal") => Some(ToolContent::Text {
+                    text: format!("[terminal: {}]", jstr(item, "terminalId")),
+                }),
+                _ => item
+                    .get("text")
+                    .and_then(|value| value.as_str())
+                    .map(|text| ToolContent::Text {
+                        text: text.to_string(),
+                    }),
+            },
+        )
         .collect()
 }
 

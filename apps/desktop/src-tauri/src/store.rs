@@ -3,10 +3,10 @@ use std::sync::Mutex;
 
 use anyhow::Result;
 use chrono::Utc;
-use rusqlite::{params, Connection, OptionalExtension, Row, Transaction};
-use serde::de::DeserializeOwned;
+use rusqlite::{Connection, OptionalExtension, Row, Transaction, params};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::domain::{
@@ -140,7 +140,10 @@ impl Store {
             delete_task_records(&tx, task_id)?;
         }
 
-        tx.execute("DELETE FROM project_resources WHERE project_id = ?1", [project_id])?;
+        tx.execute(
+            "DELETE FROM project_resources WHERE project_id = ?1",
+            [project_id],
+        )?;
         tx.execute("DELETE FROM projects WHERE id = ?1", [project_id])?;
         tx.commit()?;
 
@@ -499,9 +502,8 @@ impl Store {
 
     pub fn load_snapshot(&self, task_id: &str) -> Result<Option<(String, WorkspaceSnapshot)>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT run_id, snapshot_json FROM workspace_snapshots WHERE task_id = ?1",
-        )?;
+        let mut stmt = conn
+            .prepare("SELECT run_id, snapshot_json FROM workspace_snapshots WHERE task_id = ?1")?;
         let row = stmt
             .query_row([task_id], |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
@@ -582,11 +584,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn update_active_workspace_view(
-        &self,
-        task_id: &str,
-        view: WorkspaceView,
-    ) -> Result<()> {
+    pub fn update_active_workspace_view(&self, task_id: &str, view: WorkspaceView) -> Result<()> {
         let timestamp = now();
         self.conn.lock().unwrap().execute(
             r#"
@@ -601,10 +599,10 @@ impl Store {
     }
 
     pub fn close_active_workspace(&self, task_id: &str) -> Result<()> {
-        self.conn
-            .lock()
-            .unwrap()
-            .execute("DELETE FROM active_workspaces WHERE task_id = ?1", [task_id])?;
+        self.conn.lock().unwrap().execute(
+            "DELETE FROM active_workspaces WHERE task_id = ?1",
+            [task_id],
+        )?;
         Ok(())
     }
 }
@@ -625,10 +623,12 @@ fn project_resource_from_row(row: &Row<'_>) -> rusqlite::Result<ProjectResource>
     Ok(ProjectResource {
         id: row.get("id")?,
         project_id: row.get("project_id")?,
-        kind: ProjectResourceKind::from_str(&row.get::<_, String>("kind")?).map_err(to_sql_error)?,
+        kind: ProjectResourceKind::from_str(&row.get::<_, String>("kind")?)
+            .map_err(to_sql_error)?,
         label: row.get("label")?,
         locator: row.get("locator")?,
-        metadata: deserialize_json(&row.get::<_, String>("metadata_json")?).map_err(to_sql_error)?,
+        metadata: deserialize_json(&row.get::<_, String>("metadata_json")?)
+            .map_err(to_sql_error)?,
         created_at: row.get("created_at")?,
     })
 }
@@ -647,8 +647,10 @@ fn task_from_row(row: &Row<'_>) -> rusqlite::Result<Task> {
         provider: Provider::from_str(&row.get::<_, String>("provider")?).map_err(to_sql_error)?,
         model: row.get("model")?,
         permission_policy: row.get("permission_policy")?,
-        mcp_subset: deserialize_json(&row.get::<_, String>("mcp_subset_json")?).map_err(to_sql_error)?,
-        skill_subset: deserialize_json(&row.get::<_, String>("skill_subset_json")?).map_err(to_sql_error)?,
+        mcp_subset: deserialize_json(&row.get::<_, String>("mcp_subset_json")?)
+            .map_err(to_sql_error)?,
+        skill_subset: deserialize_json(&row.get::<_, String>("skill_subset_json")?)
+            .map_err(to_sql_error)?,
         current_run_id: row.get("current_run_id")?,
         last_open_view: WorkspaceView::from_str(&row.get::<_, String>("last_open_view")?)
             .map_err(to_sql_error)?,
@@ -683,8 +685,14 @@ fn run_from_row(row: &Row<'_>) -> rusqlite::Result<Run> {
 }
 
 fn delete_task_records(tx: &Transaction<'_>, task_id: &str) -> Result<()> {
-    tx.execute("DELETE FROM active_workspaces WHERE task_id = ?1", [task_id])?;
-    tx.execute("DELETE FROM workspace_snapshots WHERE task_id = ?1", [task_id])?;
+    tx.execute(
+        "DELETE FROM active_workspaces WHERE task_id = ?1",
+        [task_id],
+    )?;
+    tx.execute(
+        "DELETE FROM workspace_snapshots WHERE task_id = ?1",
+        [task_id],
+    )?;
     tx.execute("DELETE FROM task_events WHERE task_id = ?1", [task_id])?;
     tx.execute("DELETE FROM runs WHERE task_id = ?1", [task_id])?;
     tx.execute("DELETE FROM tasks WHERE id = ?1", [task_id])?;
@@ -780,7 +788,10 @@ fn apply_migrations(conn: &Connection) -> Result<()> {
     }
 
     if !has_column(conn, "projects", "brief")? {
-        conn.execute("ALTER TABLE projects ADD COLUMN brief TEXT NOT NULL DEFAULT ''", [])?;
+        conn.execute(
+            "ALTER TABLE projects ADD COLUMN brief TEXT NOT NULL DEFAULT ''",
+            [],
+        )?;
     }
     if !has_column(conn, "projects", "plan_markdown")? {
         conn.execute(
@@ -872,7 +883,8 @@ fn has_column(conn: &Connection, table: &str, column: &str) -> Result<bool> {
 }
 
 fn populate_task_sequences(conn: &Connection) -> Result<()> {
-    let mut task_stmt = conn.prepare("SELECT DISTINCT task_id FROM task_events ORDER BY task_id")?;
+    let mut task_stmt =
+        conn.prepare("SELECT DISTINCT task_id FROM task_events ORDER BY task_id")?;
     let task_ids = task_stmt
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -928,9 +940,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::domain::{
-        CreateProjectResourceInput, ProjectResourceKind, Provider, WorkspaceView,
-    };
+    use crate::domain::{CreateProjectResourceInput, ProjectResourceKind, Provider, WorkspaceView};
     use crate::events::SessionUpdate;
 
     static GIT_TEST_MUTEX: Mutex<()> = Mutex::new(());
@@ -939,7 +949,13 @@ mod tests {
         let _guard = GIT_TEST_MUTEX.lock().unwrap();
         Command::new("git").arg("init").arg(path).output().unwrap();
         Command::new("git")
-            .args(["-C", path.to_str().unwrap(), "config", "user.email", "vega@example.com"])
+            .args([
+                "-C",
+                path.to_str().unwrap(),
+                "config",
+                "user.email",
+                "vega@example.com",
+            ])
             .output()
             .unwrap();
         Command::new("git")
@@ -979,7 +995,11 @@ mod tests {
             })
             .unwrap();
 
-        let repo = store.list_project_repositories(&project.id).unwrap().pop().unwrap();
+        let repo = store
+            .list_project_repositories(&project.id)
+            .unwrap()
+            .pop()
+            .unwrap();
         let task = Task {
             id: Uuid::new_v4().to_string(),
             project_id: project.id.clone(),
@@ -1028,7 +1048,9 @@ mod tests {
             current_message: None,
         };
         store.save_snapshot(&task.id, &run.id, &snapshot).unwrap();
-        let workspace = store.ensure_active_workspace(&task.id, WorkspaceView::Agent).unwrap();
+        let workspace = store
+            .ensure_active_workspace(&task.id, WorkspaceView::Agent)
+            .unwrap();
         assert_eq!(workspace.task_id, task.id);
 
         let tasks = store.list_tasks(&project.id).unwrap();

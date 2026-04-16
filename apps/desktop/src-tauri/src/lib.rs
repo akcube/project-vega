@@ -3,6 +3,7 @@ mod commands;
 mod domain;
 mod events;
 mod git_commands;
+mod project_planner;
 mod projection;
 mod semantic_diff;
 mod session;
@@ -43,6 +44,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::create_project,
+            commands::suggest_project_plan,
+            commands::suggest_project_tasks,
             commands::list_projects,
             commands::get_project_board,
             commands::add_project_resource,

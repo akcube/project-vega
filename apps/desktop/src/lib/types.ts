@@ -96,6 +96,7 @@ export interface CreateTaskInput {
   projectId: string;
   title: string;
   sourceRepoResourceId?: string | null;
+  materializeWorktree?: boolean;
   provider: Provider;
   model: string;
 }

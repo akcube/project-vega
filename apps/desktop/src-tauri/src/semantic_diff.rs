@@ -312,10 +312,7 @@ async fn request_semantic_annotation(
     if let Some(finish_reason) = choice.finish_reason.as_deref()
         && finish_reason == "length"
     {
-        eprintln!(
-            "[semantic-diff] response hit max_tokens for {}",
-            file.path
-        );
+        eprintln!("[semantic-diff] response hit max_tokens for {}", file.path);
     }
 
     if let Some(refusal) = choice.message.refusal.and_then(non_empty) {
@@ -433,9 +430,8 @@ async fn ensure_runtime() -> Result<SemanticDiffRuntime> {
 }
 
 async fn init_runtime() -> std::result::Result<SemanticDiffRuntime, String> {
-    let api_key = load_openai_api_key().ok_or_else(|| {
-        "OPENAI_API_KEY not set and ~/openai.key not available".to_string()
-    })?;
+    let api_key = load_openai_api_key()
+        .ok_or_else(|| "OPENAI_API_KEY not set and ~/openai.key not available".to_string())?;
     let endpoint = env::var("VEGA_SEMANTIC_DIFF_ENDPOINT")
         .unwrap_or_else(|_| DEFAULT_OPENAI_ENDPOINT.to_string());
     let model = env::var("VEGA_SEMANTIC_DIFF_MODEL")
