@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{Project, ProjectResource, Run, Task};
+use crate::domain::{ActiveWorkspace, Project, ProjectResource, Run, Task, WorkflowState};
 use crate::events::ToolContent;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -53,9 +53,23 @@ pub struct ReviewSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum TerminalEvent {
+    Output { data: String },
+    Exit { exit_code: i32 },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalSnapshot {
+    pub output: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LiveStateViewModel {
     pub has_session: bool,
+    pub can_resume: bool,
     pub is_streaming: bool,
 }
 
@@ -69,10 +83,50 @@ pub struct RunViewModel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WorkspaceSummaryViewModel {
+    pub workspace: ActiveWorkspace,
+    pub task_id: String,
+    pub task_title: String,
+    pub project_id: String,
+    pub project_name: String,
+    pub workflow_state: WorkflowState,
+    pub is_streaming: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskBoardCardViewModel {
+    pub task: Task,
+    pub source_repo: Option<ProjectResource>,
+    pub has_open_workspace: bool,
+    pub is_streaming: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskBoardColumnViewModel {
+    pub state: WorkflowState,
+    pub label: String,
+    pub tasks: Vec<TaskBoardCardViewModel>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectBoardViewModel {
+    pub project: Project,
+    pub repositories: Vec<ProjectResource>,
+    pub documents: Vec<ProjectResource>,
+    pub columns: Vec<TaskBoardColumnViewModel>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskWorkspaceViewModel {
+    pub workspace: ActiveWorkspace,
     pub project: Project,
     pub task: Task,
-    pub resources: Vec<ProjectResource>,
+    pub source_repo: Option<ProjectResource>,
+    pub documents: Vec<ProjectResource>,
     pub run: Option<RunViewModel>,
     pub snapshot: WorkspaceSnapshot,
     pub review: ReviewSummary,

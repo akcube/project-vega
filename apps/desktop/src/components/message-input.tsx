@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, type KeyboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send, Square } from "lucide-react";
@@ -26,7 +26,7 @@ export function MessageInput({
     setText("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();

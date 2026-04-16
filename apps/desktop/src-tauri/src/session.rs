@@ -17,6 +17,12 @@ pub struct SessionInfo {
     pub provider_log_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct AgentCapabilities {
+    pub load_session: bool,
+    pub resume_session: bool,
+}
+
 enum AgentCommand {
     Prompt {
         text: String,
@@ -30,6 +36,8 @@ enum AgentCommand {
 struct TaskSession {
     cmd_tx: mpsc::Sender<AgentCommand>,
     info: SessionInfo,
+    #[allow(dead_code)]
+    capabilities: AgentCapabilities,
 }
 
 #[derive(Serialize)]
@@ -96,7 +104,11 @@ impl SessionManager {
         self.sessions.lock().unwrap().contains_key(task_id)
     }
 
-    pub async fn start(&self, task: &Task) -> Result<SessionInfo> {
+    pub async fn start(
+        &self,
+        task: &Task,
+        existing_session_id: Option<&str>,
+    ) -> Result<SessionInfo> {
         if let Some(existing) = self.sessions.lock().unwrap().get(&task.id) {
             return Ok(existing.info.clone());
         }
@@ -149,9 +161,24 @@ impl SessionManager {
         });
 
         let mut connection = AcpConnection::new(stdin, task_id.clone());
-        initialize_connection(&mut connection, &mut msg_rx, &task_id, &cwd).await?;
-        let provider_session_id =
-            create_provider_session(&mut connection, &mut msg_rx, &cwd).await?;
+        let capabilities =
+            initialize_connection(&mut connection, &mut msg_rx, &task_id, &cwd).await?;
+        let provider_session_id = match existing_session_id {
+            Some(session_id) if capabilities.resume_session => {
+                resume_provider_session(&mut connection, &mut msg_rx, &cwd, session_id).await?;
+                session_id.to_string()
+            }
+            Some(session_id) if capabilities.load_session => {
+                load_provider_session(&mut connection, &mut msg_rx, &cwd, session_id).await?;
+                session_id.to_string()
+            }
+            Some(session_id) => {
+                return Err(anyhow!(
+                    "provider does not support loading existing session {session_id}"
+                ));
+            }
+            None => create_provider_session(&mut connection, &mut msg_rx, &cwd).await?,
+        };
 
         let info = SessionInfo {
             provider_session_id: provider_session_id.clone(),
@@ -171,7 +198,14 @@ impl SessionManager {
         self.sessions
             .lock()
             .unwrap()
-            .insert(task_id, TaskSession { cmd_tx, info: info.clone() });
+            .insert(
+                task_id,
+                TaskSession {
+                    cmd_tx,
+                    info: info.clone(),
+                    capabilities,
+                },
+            );
 
         Ok(info)
     }
@@ -234,7 +268,7 @@ async fn initialize_connection(
     msg_rx: &mut mpsc::Receiver<RpcMessage>,
     task_id: &str,
     cwd: &Path,
-) -> Result<()> {
+) -> Result<AgentCapabilities> {
     let init_params = serde_json::json!({
         "protocolVersion": 1,
         "clientCapabilities": {
@@ -247,11 +281,22 @@ async fn initialize_connection(
             "version": "0.1.0"
         }
     });
-    connection
+    let init_result = connection
         .request(msg_rx, "initialize", Some(init_params), None)
         .await?;
     eprintln!("[acp:{task_id}] initialized for {}", cwd.display());
-    Ok(())
+    Ok(AgentCapabilities {
+        load_session: init_result
+            .get("agentCapabilities")
+            .and_then(|value| value.get("loadSession"))
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
+        resume_session: init_result
+            .get("agentCapabilities")
+            .and_then(|value| value.get("sessionCapabilities"))
+            .and_then(|value| value.get("resume"))
+            .is_some(),
+    })
 }
 
 async fn create_provider_session(
@@ -271,6 +316,40 @@ async fn create_provider_session(
         .and_then(|value| value.as_str())
         .map(str::to_string)
         .ok_or_else(|| anyhow!("missing sessionId in session/new response"))
+}
+
+async fn load_provider_session(
+    connection: &mut AcpConnection,
+    msg_rx: &mut mpsc::Receiver<RpcMessage>,
+    cwd: &Path,
+    session_id: &str,
+) -> Result<()> {
+    let load_params = serde_json::json!({
+        "sessionId": session_id,
+        "cwd": cwd.to_string_lossy(),
+        "mcpServers": []
+    });
+    connection
+        .request(msg_rx, "session/load", Some(load_params), None)
+        .await?;
+    Ok(())
+}
+
+async fn resume_provider_session(
+    connection: &mut AcpConnection,
+    msg_rx: &mut mpsc::Receiver<RpcMessage>,
+    cwd: &Path,
+    session_id: &str,
+) -> Result<()> {
+    let resume_params = serde_json::json!({
+        "sessionId": session_id,
+        "cwd": cwd.to_string_lossy(),
+        "mcpServers": []
+    });
+    connection
+        .request(msg_rx, "session/resume", Some(resume_params), None)
+        .await?;
+    Ok(())
 }
 
 async fn agent_command_loop(

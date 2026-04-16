@@ -57,30 +57,67 @@ impl ProjectResourceKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum TaskStatus {
-    Idle,
-    Running,
-    Cancelled,
-    Failed,
+pub enum ProjectLifecycleState {
+    Active,
+    Archived,
 }
 
-impl TaskStatus {
+impl ProjectLifecycleState {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Idle => "idle",
-            Self::Running => "running",
-            Self::Cancelled => "cancelled",
-            Self::Failed => "failed",
+            Self::Active => "active",
+            Self::Archived => "archived",
         }
     }
 
     pub fn from_str(value: &str) -> anyhow::Result<Self> {
         match value {
-            "idle" => Ok(Self::Idle),
-            "running" => Ok(Self::Running),
-            "cancelled" => Ok(Self::Cancelled),
-            "failed" => Ok(Self::Failed),
-            other => anyhow::bail!("unknown task status: {other}"),
+            "active" => Ok(Self::Active),
+            "archived" => Ok(Self::Archived),
+            other => anyhow::bail!("unknown project lifecycle state: {other}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowState {
+    Todo,
+    InProgress,
+    Blocked,
+    Completed,
+}
+
+impl WorkflowState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Todo => "todo",
+            Self::InProgress => "in_progress",
+            Self::Blocked => "blocked",
+            Self::Completed => "completed",
+        }
+    }
+
+    pub fn from_str(value: &str) -> anyhow::Result<Self> {
+        match value {
+            "todo" => Ok(Self::Todo),
+            "in_progress" => Ok(Self::InProgress),
+            "blocked" => Ok(Self::Blocked),
+            "completed" => Ok(Self::Completed),
+            other => anyhow::bail!("unknown workflow state: {other}"),
+        }
+    }
+
+    pub fn ordered() -> [Self; 4] {
+        [Self::Todo, Self::InProgress, Self::Blocked, Self::Completed]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Todo => "Todo",
+            Self::InProgress => "In Progress",
+            Self::Blocked => "Blocked",
+            Self::Completed => "Completed",
         }
     }
 }
@@ -117,28 +154,29 @@ impl RunStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
-pub enum TaskView {
+pub enum WorkspaceView {
     #[default]
     Agent,
+    Terminal,
     Review,
-    Run,
 }
 
-impl TaskView {
+impl WorkspaceView {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Agent => "agent",
+            Self::Terminal => "terminal",
             Self::Review => "review",
-            Self::Run => "run",
         }
     }
 
     pub fn from_str(value: &str) -> anyhow::Result<Self> {
         match value {
             "agent" => Ok(Self::Agent),
+            "terminal" => Ok(Self::Terminal),
             "review" => Ok(Self::Review),
-            "run" => Ok(Self::Run),
-            other => anyhow::bail!("unknown task view: {other}"),
+            "run" => Ok(Self::Agent),
+            other => anyhow::bail!("unknown workspace view: {other}"),
         }
     }
 }
@@ -148,7 +186,9 @@ impl TaskView {
 pub struct Project {
     pub id: String,
     pub name: String,
-    pub description: String,
+    pub brief: String,
+    pub plan_markdown: String,
+    pub lifecycle_state: ProjectLifecycleState,
     pub created_at: String,
 }
 
@@ -170,17 +210,29 @@ pub struct Task {
     pub id: String,
     pub project_id: String,
     pub title: String,
-    pub status: TaskStatus,
+    pub workflow_state: WorkflowState,
+    pub source_repo_resource_id: Option<String>,
     pub worktree_path: String,
+    pub worktree_name: String,
+    pub branch_name: String,
     pub provider: Provider,
     pub model: String,
     pub permission_policy: String,
     pub mcp_subset: Vec<String>,
     pub skill_subset: Vec<String>,
     pub current_run_id: Option<String>,
-    pub last_open_view: TaskView,
+    pub last_open_view: WorkspaceView,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveWorkspace {
+    pub task_id: String,
+    pub selected_view: WorkspaceView,
+    pub strip_order: i64,
+    pub last_focused_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -199,9 +251,19 @@ pub struct Run {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CreateProjectResourceInput {
+    pub kind: ProjectResourceKind,
+    pub label: String,
+    pub locator: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateProjectInput {
     pub name: String,
-    pub description: String,
+    pub brief: String,
+    pub plan_markdown: String,
+    pub resources: Vec<CreateProjectResourceInput>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -218,7 +280,7 @@ pub struct AddProjectResourceInput {
 pub struct CreateTaskInput {
     pub project_id: String,
     pub title: String,
-    pub worktree_path: String,
+    pub source_repo_resource_id: Option<String>,
     pub provider: Provider,
     pub model: String,
 }

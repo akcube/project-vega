@@ -1,13 +1,17 @@
 export type Provider = "Claude" | "Codex";
 export type ProjectResourceKind = "repo" | "doc";
-export type TaskStatus = "idle" | "running" | "cancelled" | "failed";
+export type ProjectLifecycleState = "active" | "archived";
+export type WorkflowState = "todo" | "in_progress" | "blocked" | "completed";
 export type RunStatus = "ready" | "streaming" | "cancelled" | "failed";
-export type TaskView = "agent" | "review" | "run";
+export type WorkspaceView = "agent" | "terminal" | "review";
+export type AppMode = "projects" | "workspaces";
 
 export interface Project {
   id: string;
   name: string;
-  description: string;
+  brief: string;
+  planMarkdown: string;
+  lifecycleState: ProjectLifecycleState;
   createdAt: string;
 }
 
@@ -25,17 +29,27 @@ export interface Task {
   id: string;
   projectId: string;
   title: string;
-  status: TaskStatus;
+  workflowState: WorkflowState;
+  sourceRepoResourceId: string | null;
   worktreePath: string;
+  worktreeName: string;
+  branchName: string;
   provider: Provider;
   model: string;
   permissionPolicy: string;
   mcpSubset: string[];
   skillSubset: string[];
   currentRunId: string | null;
-  lastOpenView: TaskView;
+  lastOpenView: WorkspaceView;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ActiveWorkspace {
+  taskId: string;
+  selectedView: WorkspaceView;
+  stripOrder: number;
+  lastFocusedAt: string;
 }
 
 export interface Run {
@@ -50,9 +64,47 @@ export interface Run {
   endedAt: string | null;
 }
 
-export type ToolContent =
-  | { type: "text"; text: string }
-  | { type: "diff"; path: string; oldText: string | null; newText: string };
+export interface CreateProjectResourceInput {
+  kind: ProjectResourceKind;
+  label: string;
+  locator: string;
+}
+
+export interface CreateProjectInput {
+  name: string;
+  brief: string;
+  planMarkdown: string;
+  resources: CreateProjectResourceInput[];
+}
+
+export interface AddProjectResourceInput {
+  projectId: string;
+  kind: ProjectResourceKind;
+  label: string;
+  locator: string;
+}
+
+export interface CreateTaskInput {
+  projectId: string;
+  title: string;
+  sourceRepoResourceId?: string | null;
+  provider: Provider;
+  model: string;
+}
+
+export interface ToolContentText {
+  type: "text";
+  text: string;
+}
+
+export interface ToolContentDiff {
+  type: "diff";
+  path: string;
+  oldText: string | null;
+  newText: string;
+}
+
+export type ToolContent = ToolContentText | ToolContentDiff;
 
 export interface PlanEntry {
   content: string;
@@ -117,6 +169,7 @@ export interface ReviewSummary {
 
 export interface LiveStateViewModel {
   hasSession: boolean;
+  canResume: boolean;
   isStreaming: boolean;
 }
 
@@ -126,12 +179,60 @@ export interface RunViewModel {
   logReference: string | null;
 }
 
+export interface WorkspaceSummaryViewModel {
+  workspace: ActiveWorkspace;
+  taskId: string;
+  taskTitle: string;
+  projectId: string;
+  projectName: string;
+  workflowState: WorkflowState;
+  isStreaming: boolean;
+}
+
+export interface TaskBoardCardViewModel {
+  task: Task;
+  sourceRepo: ProjectResource | null;
+  hasOpenWorkspace: boolean;
+  isStreaming: boolean;
+}
+
+export interface TaskBoardColumnViewModel {
+  state: WorkflowState;
+  label: string;
+  tasks: TaskBoardCardViewModel[];
+}
+
+export interface ProjectBoardViewModel {
+  project: Project;
+  repositories: ProjectResource[];
+  documents: ProjectResource[];
+  columns: TaskBoardColumnViewModel[];
+}
+
 export interface TaskWorkspaceViewModel {
+  workspace: ActiveWorkspace;
   project: Project;
   task: Task;
-  resources: ProjectResource[];
+  sourceRepo: ProjectResource | null;
+  documents: ProjectResource[];
   run: RunViewModel | null;
   snapshot: WorkspaceSnapshot;
   review: ReviewSummary;
   live: LiveStateViewModel;
+}
+
+export interface TerminalEventOutput {
+  type: "output";
+  data: string;
+}
+
+export interface TerminalEventExit {
+  type: "exit";
+  exitCode: number;
+}
+
+export type TerminalEvent = TerminalEventOutput | TerminalEventExit;
+
+export interface TerminalSnapshot {
+  output: string;
 }

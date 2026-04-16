@@ -4,15 +4,17 @@ import { useTaskStore } from "@/stores/task-store";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function App() {
-  const loadProjects = useTaskStore((s) => s.loadProjects);
+  const bootstrap = useTaskStore((s) => s.bootstrap);
 
   useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
+    void bootstrap();
+  }, [bootstrap]);
 
   return (
-    <TooltipProvider>
-      <AppShell />
-    </TooltipProvider>
+    <div className="dark">
+      <TooltipProvider>
+        <AppShell />
+      </TooltipProvider>
+    </div>
   );
 }

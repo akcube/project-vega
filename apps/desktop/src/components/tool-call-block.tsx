@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { ChevronRight, FileText, Pencil, Search, Terminal, Trash2, Move, Brain, 
 import { DiffView } from "./diff-view";
 import type { ToolCallState } from "@/lib/types";
 
-const kindIcons: Record<string, React.ReactNode> = {
+const kindIcons: Record<string, ReactNode> = {
   read: <FileText className="h-3.5 w-3.5" />,
   edit: <Pencil className="h-3.5 w-3.5" />,
   search: <Search className="h-3.5 w-3.5" />,

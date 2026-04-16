@@ -7,7 +7,7 @@ export function useSession() {
   const store = useTaskStore();
 
   const sendPrompt = async (text: string) => {
-    const taskId = store.selectedTaskId;
+    const taskId = store.selectedWorkspaceTaskId;
     if (!taskId || store.isStreaming) return;
 
     store.beginStreaming(text);
@@ -25,7 +25,7 @@ export function useSession() {
   };
 
   const cancel = async () => {
-    const taskId = store.selectedTaskId;
+    const taskId = store.selectedWorkspaceTaskId;
     if (!taskId) return;
     await invoke("cancel_run", { taskId });
     await store.refreshWorkspace();

@@ -25,6 +25,7 @@ chrono = "0.4"
 agent-client-protocol = { version = "0.10", features = ["unstable"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 vega_git = { path = "../../../crates/git" }
+portable-pty = "0.9"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
