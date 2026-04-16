@@ -4,8 +4,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use anyhow::{anyhow, Result};
-use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, MasterPty, PtySize};
+use anyhow::{Result, anyhow};
+use portable_pty::{Child, ChildKiller, CommandBuilder, MasterPty, PtySize, native_pty_system};
 use tauri::async_runtime;
 use tauri::ipc::Channel;
 use tokio::sync::broadcast;

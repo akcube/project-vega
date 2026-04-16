@@ -15,8 +15,12 @@ pub struct ToolCallState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum MessageSegment {
-    Text { text: String },
-    Thinking { text: String },
+    Text {
+        text: String,
+    },
+    Thinking {
+        text: String,
+    },
     ToolCall {
         #[serde(rename = "toolCall", alias = "tool_call")]
         tool_call: ToolCallState,
@@ -79,6 +83,73 @@ pub struct RunViewModel {
     pub run: Run,
     pub session_reference: Option<String>,
     pub log_reference: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum WorktreeNodeKind {
+    Directory,
+    File,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum WorktreeChangeKind {
+    Added,
+    Modified,
+    Deleted,
+    Renamed,
+    Copied,
+    Typechange,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeTreeNode {
+    pub name: String,
+    pub path: String,
+    pub kind: WorktreeNodeKind,
+    pub is_changed: bool,
+    pub changed_descendant_count: usize,
+    pub children: Vec<WorktreeTreeNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeChangeViewModel {
+    pub path: String,
+    pub kind: WorktreeChangeKind,
+    pub additions: usize,
+    pub deletions: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeDiffStatsViewModel {
+    pub files_changed: usize,
+    pub insertions: usize,
+    pub deletions: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeInspectionViewModel {
+    pub root_name: String,
+    pub root_path: String,
+    pub is_truncated: bool,
+    pub tree: Vec<WorktreeTreeNode>,
+    pub changed_files: Vec<WorktreeChangeViewModel>,
+    pub stats: WorktreeDiffStatsViewModel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeFileDocumentViewModel {
+    pub path: String,
+    pub text: String,
+    pub is_binary: bool,
+    pub is_deleted: bool,
+    pub line_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

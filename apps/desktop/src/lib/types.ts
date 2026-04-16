@@ -3,8 +3,16 @@ export type ProjectResourceKind = "repo" | "doc";
 export type ProjectLifecycleState = "active" | "archived";
 export type WorkflowState = "todo" | "in_progress" | "in_review" | "completed";
 export type RunStatus = "ready" | "streaming" | "cancelled" | "failed";
-export type WorkspaceView = "agent" | "terminal" | "review";
+export type WorkspaceView = "agent" | "files" | "terminal" | "review";
 export type AppMode = "projects" | "feed" | "workspaces";
+export type WorktreeNodeKind = "directory" | "file";
+export type WorktreeChangeKind =
+  | "added"
+  | "modified"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "typechange";
 
 export type FeedEntryKind = "completion" | "alert";
 
@@ -104,6 +112,7 @@ export interface CreateTaskInput {
   projectId: string;
   title: string;
   sourceRepoResourceId?: string | null;
+  materializeWorktree?: boolean;
   provider: Provider;
   model: string;
 }
@@ -181,6 +190,45 @@ export interface DiffArtifact {
 export interface ReviewSummary {
   toolCalls: ToolCallState[];
   diffs: DiffArtifact[];
+}
+
+export interface WorktreeTreeNode {
+  name: string;
+  path: string;
+  kind: WorktreeNodeKind;
+  isChanged: boolean;
+  changedDescendantCount: number;
+  children: WorktreeTreeNode[];
+}
+
+export interface WorktreeChangeSummary {
+  path: string;
+  kind: WorktreeChangeKind;
+  additions: number;
+  deletions: number;
+}
+
+export interface WorktreeDiffStats {
+  filesChanged: number;
+  insertions: number;
+  deletions: number;
+}
+
+export interface WorktreeInspectionViewModel {
+  rootName: string;
+  rootPath: string;
+  isTruncated: boolean;
+  tree: WorktreeTreeNode[];
+  changedFiles: WorktreeChangeSummary[];
+  stats: WorktreeDiffStats;
+}
+
+export interface WorktreeFileDocument {
+  path: string;
+  text: string;
+  isBinary: boolean;
+  isDeleted: boolean;
+  lineCount: number;
 }
 
 export interface LiveStateViewModel {

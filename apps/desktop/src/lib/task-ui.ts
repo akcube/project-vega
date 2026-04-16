@@ -9,6 +9,7 @@ export const WORKFLOW_STATES: WorkflowState[] = [
 
 export const WORKSPACE_VIEWS: { id: WorkspaceView; label: string }[] = [
   { id: "agent", label: "Agent" },
+  { id: "files", label: "Files" },
   { id: "terminal", label: "Terminal" },
   { id: "review", label: "Review" },
 ];

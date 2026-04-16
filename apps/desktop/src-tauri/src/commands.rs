@@ -1,17 +1,19 @@
-use tauri::ipc::Channel;
 use tauri::State;
+use tauri::ipc::Channel;
 
+use crate::AppState;
 use crate::domain::{
-    AddProjectResourceInput, CreateProjectInput, CreateTaskInput, Project, ProjectResource, Task,
-    WorkflowState, WorkspaceView,
+    AddProjectResourceInput, CreateProjectInput, CreateTaskInput, Project, ProjectPlanGuidance,
+    ProjectPlanningInput, ProjectResource, ProjectTaskSuggestions, Task, WorkflowState,
+    WorkspaceView,
 };
 use crate::events::SessionUpdate;
 use crate::feed::FeedEntry;
+use crate::project_planner;
 use crate::view_model::{
     ProjectBoardViewModel, TaskWorkspaceViewModel, TerminalEvent, TerminalSnapshot,
-    WorkspaceSummaryViewModel,
+    WorktreeFileDocumentViewModel, WorktreeInspectionViewModel, WorkspaceSummaryViewModel,
 };
-use crate::AppState;
 
 #[tauri::command]
 pub fn create_project(
@@ -22,6 +24,20 @@ pub fn create_project(
         .catalog
         .create_project(input)
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn suggest_project_plan(
+    input: ProjectPlanningInput,
+) -> Result<ProjectPlanGuidance, String> {
+    Ok(project_planner::suggest_project_plan(input).await)
+}
+
+#[tauri::command]
+pub async fn suggest_project_tasks(
+    input: ProjectPlanningInput,
+) -> Result<ProjectTaskSuggestions, String> {
+    Ok(project_planner::suggest_project_tasks(input).await)
 }
 
 #[tauri::command]
@@ -55,10 +71,7 @@ pub fn add_project_resource(
 }
 
 #[tauri::command]
-pub fn create_task(
-    state: State<'_, AppState>,
-    input: CreateTaskInput,
-) -> Result<Task, String> {
+pub fn create_task(state: State<'_, AppState>, input: CreateTaskInput) -> Result<Task, String> {
     state
         .catalog
         .create_task(input)
@@ -87,10 +100,7 @@ pub async fn delete_task(state: State<'_, AppState>, task_id: String) -> Result<
 }
 
 #[tauri::command]
-pub async fn delete_project(
-    state: State<'_, AppState>,
-    project_id: String,
-) -> Result<(), String> {
+pub async fn delete_project(state: State<'_, AppState>, project_id: String) -> Result<(), String> {
     state
         .catalog
         .delete_project(&project_id)
@@ -136,6 +146,42 @@ pub fn close_workspace(state: State<'_, AppState>, task_id: String) -> Result<()
     state
         .workspace
         .close_workspace(&task_id)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn inspect_worktree(
+    state: State<'_, AppState>,
+    task_id: String,
+) -> Result<WorktreeInspectionViewModel, String> {
+    state
+        .workspace
+        .inspect_worktree(&task_id)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn read_worktree_file(
+    state: State<'_, AppState>,
+    task_id: String,
+    relative_path: String,
+) -> Result<WorktreeFileDocumentViewModel, String> {
+    state
+        .workspace
+        .read_worktree_file(&task_id, &relative_path)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn save_worktree_file(
+    state: State<'_, AppState>,
+    task_id: String,
+    relative_path: String,
+    contents: String,
+) -> Result<WorktreeFileDocumentViewModel, String> {
+    state
+        .workspace
+        .save_worktree_file(&task_id, &relative_path, &contents)
         .map_err(|error| error.to_string())
 }
 

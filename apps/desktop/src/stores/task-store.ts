@@ -40,7 +40,9 @@ interface AppState {
   selectWorkspace: (taskId: string) => Promise<void>;
   createProject: (input: CreateProjectInput) => Promise<Project>;
   addProjectResource: (input: AddProjectResourceInput) => Promise<ProjectResource>;
-  createTask: (input: Omit<CreateTaskInput, "projectId">) => Promise<Task>;
+  createTask: (
+    input: Omit<CreateTaskInput, "projectId"> & { projectId?: string | null },
+  ) => Promise<Task>;
   updateTaskWorkflowState: (taskId: string, workflowState: WorkflowState) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
@@ -173,7 +175,7 @@ export const useTaskStore = create<AppState>((set, get) => ({
   },
 
   createTask: async (input) => {
-    const projectId = get().selectedProjectId;
+    const projectId = input.projectId ?? get().selectedProjectId;
     if (!projectId) {
       throw new Error("Select a project before creating a task.");
     }
@@ -183,6 +185,7 @@ export const useTaskStore = create<AppState>((set, get) => ({
         projectId,
         title: input.title,
         sourceRepoResourceId: input.sourceRepoResourceId ?? null,
+        materializeWorktree: input.materializeWorktree ?? true,
         provider: input.provider,
         model: input.model,
       },

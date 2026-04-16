@@ -1,9 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use tauri::ipc::Channel;
 use tokio::sync::mpsc;
+use vega_git::{CreateWorktreeRequest, GitService};
 
 use crate::domain::{Run, RunStatus, Task, WorkspaceView};
 use crate::events::{SessionUpdate, WorkspaceEvent};
@@ -14,8 +15,10 @@ use crate::store::Store;
 use crate::terminal_service::TerminalService;
 use crate::view_model::{
     LiveStateViewModel, RunViewModel, TaskWorkspaceViewModel, TerminalEvent, TerminalSnapshot,
-    WorkspaceSnapshot, WorkspaceSummaryViewModel,
+    WorktreeFileDocumentViewModel, WorktreeInspectionViewModel, WorkspaceSnapshot,
+    WorkspaceSummaryViewModel,
 };
+use crate::worktree_inspector::WorktreeInspector;
 
 #[derive(Clone)]
 pub struct WorkspaceService {
@@ -72,7 +75,7 @@ impl WorkspaceService {
     }
 
     pub fn open_workspace(&self, task_id: &str) -> Result<TaskWorkspaceViewModel> {
-        let task = self.store.get_task(task_id)?;
+        let task = self.ensure_task_worktree(self.store.get_task(task_id)?)?;
         self.store
             .ensure_active_workspace(task_id, task.last_open_view.clone())?;
         self.store.focus_workspace(task_id)?;
@@ -82,6 +85,30 @@ impl WorkspaceService {
     pub fn close_workspace(&self, task_id: &str) -> Result<()> {
         self.terminals.stop(task_id)?;
         self.store.close_active_workspace(task_id)
+    }
+
+    pub fn inspect_worktree(&self, task_id: &str) -> Result<WorktreeInspectionViewModel> {
+        let task = self.store.get_task(task_id)?;
+        WorktreeInspector::new().inspect(Path::new(&task.worktree_path))
+    }
+
+    pub fn read_worktree_file(
+        &self,
+        task_id: &str,
+        relative_path: &str,
+    ) -> Result<WorktreeFileDocumentViewModel> {
+        let task = self.store.get_task(task_id)?;
+        WorktreeInspector::new().read_file(Path::new(&task.worktree_path), relative_path)
+    }
+
+    pub fn save_worktree_file(
+        &self,
+        task_id: &str,
+        relative_path: &str,
+        contents: &str,
+    ) -> Result<WorktreeFileDocumentViewModel> {
+        let task = self.store.get_task(task_id)?;
+        WorktreeInspector::new().write_file(Path::new(&task.worktree_path), relative_path, contents)
     }
 
     pub fn set_workspace_view(
@@ -106,9 +133,14 @@ impl WorkspaceService {
         rows: u16,
         on_event: Channel<TerminalEvent>,
     ) -> Result<TerminalSnapshot> {
-        let task = self.store.get_task(task_id)?;
-        self.terminals
-            .attach(task_id, Path::new(&task.worktree_path), cols, rows, on_event)
+        let task = self.ensure_task_worktree(self.store.get_task(task_id)?)?;
+        self.terminals.attach(
+            task_id,
+            Path::new(&task.worktree_path),
+            cols,
+            rows,
+            on_event,
+        )
     }
 
     pub fn write_terminal(&self, task_id: &str, data: &str) -> Result<()> {
@@ -125,10 +157,11 @@ impl WorkspaceService {
         text: &str,
         on_event: Channel<SessionUpdate>,
     ) -> Result<String> {
-        let task = self.store.get_task(task_id)?;
+        let task = self.ensure_task_worktree(self.store.get_task(task_id)?)?;
         let run = self.ensure_live_run(&task).await?;
 
-        self.store.update_run_status(&run.id, RunStatus::Streaming)?;
+        self.store
+            .update_run_status(&run.id, RunStatus::Streaming)?;
         self.append_event_and_snapshot(
             &task,
             &run,
@@ -188,7 +221,8 @@ impl WorkspaceService {
             self.sessions.cancel(task_id).await?;
         }
         if let Some(run) = self.store.get_current_run(task_id)? {
-            self.store.update_run_status(&run.id, RunStatus::Cancelled)?;
+            self.store
+                .update_run_status(&run.id, RunStatus::Cancelled)?;
         }
         Ok(())
     }
@@ -277,7 +311,12 @@ impl WorkspaceService {
         )
     }
 
-    fn append_event_and_snapshot(&self, task: &Task, run: &Run, event: &WorkspaceEvent) -> Result<()> {
+    fn append_event_and_snapshot(
+        &self,
+        task: &Task,
+        run: &Run,
+        event: &WorkspaceEvent,
+    ) -> Result<()> {
         self.store.append_task_event(&task.id, &run.id, event)?;
 
         let snapshot = match self.store.load_snapshot(&task.id)? {
@@ -349,6 +388,29 @@ impl WorkspaceService {
             info.provider_log_path.as_deref(),
         )
     }
+
+    fn ensure_task_worktree(&self, task: Task) -> Result<Task> {
+        if !task.worktree_path.is_empty() && Path::new(&task.worktree_path).exists() {
+            return Ok(task);
+        }
+
+        let source_repo_id = task
+            .source_repo_resource_id
+            .as_deref()
+            .ok_or_else(|| anyhow!("task has no source repository configured"))?;
+        let source_repo = self.store.get_project_resource(source_repo_id)?;
+
+        GitService::new().create_worktree(CreateWorktreeRequest {
+            repository_path: PathBuf::from(source_repo.locator),
+            worktree_path: PathBuf::from(&task.worktree_path),
+            worktree_name: task.worktree_name.clone(),
+            branch_name: task.branch_name.clone(),
+            start_point: None,
+            reuse_existing_branch: true,
+        })?;
+
+        Ok(task)
+    }
 }
 
 #[cfg(test)]
@@ -356,12 +418,10 @@ mod tests {
     use std::sync::Arc;
 
     use chrono::Utc;
-    use tempfile::{tempdir, TempDir};
+    use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use crate::domain::{
-        CreateProjectInput, Provider, Task, WorkflowState, WorkspaceView,
-    };
+    use crate::domain::{CreateProjectInput, Provider, Task, WorkflowState, WorkspaceView};
 
     struct TestHarness {
         _temp: TempDir,
@@ -416,7 +476,10 @@ mod tests {
     #[test]
     fn open_workspace_rehydrates_snapshot_from_task_events() {
         let harness = test_service();
-        harness.service.create_run_for_task(&harness.task.id).unwrap();
+        harness
+            .service
+            .create_run_for_task(&harness.task.id)
+            .unwrap();
         harness
             .service
             .append_user_message_for_task(&harness.task.id, "Build the shell")
@@ -459,8 +522,14 @@ mod tests {
     #[test]
     fn creating_multiple_runs_keeps_only_latest_current_run() {
         let harness = test_service();
-        let first = harness.service.create_run_for_task(&harness.task.id).unwrap();
-        let second = harness.service.create_run_for_task(&harness.task.id).unwrap();
+        let first = harness
+            .service
+            .create_run_for_task(&harness.task.id)
+            .unwrap();
+        let second = harness
+            .service
+            .create_run_for_task(&harness.task.id)
+            .unwrap();
         assert_ne!(first.id, second.id);
 
         let workspace = harness.service.open_workspace(&harness.task.id).unwrap();

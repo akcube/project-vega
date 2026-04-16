@@ -109,7 +109,12 @@ impl WorkflowState {
     }
 
     pub fn ordered() -> [Self; 4] {
-        [Self::Todo, Self::InProgress, Self::InReview, Self::Completed]
+        [
+            Self::Todo,
+            Self::InProgress,
+            Self::InReview,
+            Self::Completed,
+        ]
     }
 
     pub fn label(&self) -> &'static str {
@@ -157,6 +162,7 @@ impl RunStatus {
 pub enum WorkspaceView {
     #[default]
     Agent,
+    Files,
     Terminal,
     Review,
 }
@@ -165,6 +171,7 @@ impl WorkspaceView {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Agent => "agent",
+            Self::Files => "files",
             Self::Terminal => "terminal",
             Self::Review => "review",
         }
@@ -173,6 +180,7 @@ impl WorkspaceView {
     pub fn from_str(value: &str) -> anyhow::Result<Self> {
         match value {
             "agent" => Ok(Self::Agent),
+            "files" => Ok(Self::Files),
             "terminal" => Ok(Self::Terminal),
             "review" => Ok(Self::Review),
             "run" => Ok(Self::Agent),
@@ -281,6 +289,72 @@ pub struct CreateTaskInput {
     pub project_id: String,
     pub title: String,
     pub source_repo_resource_id: Option<String>,
+    #[serde(default = "default_materialize_worktree")]
+    pub materialize_worktree: bool,
     pub provider: Provider,
     pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectPlanningInput {
+    pub name: String,
+    pub brief: String,
+    pub plan_markdown: String,
+    pub resources: Vec<CreateProjectResourceInput>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanningReadiness {
+    Early,
+    NeedsClarification,
+    Solid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanningIssueSeverity {
+    Critical,
+    Warning,
+    Note,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectPlanningIssue {
+    pub severity: PlanningIssueSeverity,
+    pub title: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectPlanGuidance {
+    pub summary: Option<String>,
+    pub readiness: PlanningReadiness,
+    pub suggestions: Vec<String>,
+    pub issues: Vec<ProjectPlanningIssue>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SuggestedProjectTask {
+    pub id: String,
+    pub title: String,
+    pub summary: String,
+    pub rationale: Option<String>,
+    pub source_repo_label: Option<String>,
+    pub confidence: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectTaskSuggestions {
+    pub summary: Option<String>,
+    pub tasks: Vec<SuggestedProjectTask>,
+}
+
+fn default_materialize_worktree() -> bool {
+    true
 }

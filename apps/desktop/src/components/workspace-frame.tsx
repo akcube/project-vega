@@ -1,6 +1,7 @@
 import { AgentView } from "@/components/agent-view";
 import { ReviewView } from "@/components/review-view";
 import { TerminalPane } from "@/components/terminal-pane";
+import { WorktreePane } from "@/components/worktree-pane";
 import { WorkspaceViewRail } from "@/components/workspace-view-rail";
 import type { TaskWorkspaceViewModel, WorkspaceView } from "@/lib/types";
 
@@ -22,11 +23,14 @@ export function WorkspaceFrame({ workspace, onViewChange }: WorkspaceFrameProps)
           {workspace.workspace.selectedView === "agent" ? (
             <AgentView snapshot={workspace.snapshot} isStreaming={workspace.live.isStreaming} />
           ) : null}
+          {workspace.workspace.selectedView === "files" ? (
+            <WorktreePane key={workspace.task.id} workspace={workspace} />
+          ) : null}
           {workspace.workspace.selectedView === "terminal" ? (
             <TerminalPane key={workspace.task.id} workspace={workspace} />
           ) : null}
           {workspace.workspace.selectedView === "review" ? (
-            <ReviewView review={workspace.review} />
+            <ReviewView workspace={workspace} />
           ) : null}
         </div>
       </div>

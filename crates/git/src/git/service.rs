@@ -55,7 +55,17 @@ impl GitService {
 
         let mut revwalk = repo.revwalk()?;
         revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
-        revwalk.push_head()?;
+        if let Err(error) = revwalk.push_head() {
+            if is_missing_head_error(&error) {
+                return Ok(CommitHistoryResult {
+                    repository_path: request.repository_path,
+                    head_reference,
+                    commits: Vec::new(),
+                });
+            }
+
+            return Err(error.into());
+        }
 
         let commits = revwalk
             .take(request.max_count)
@@ -174,6 +184,7 @@ impl GitService {
                 new_content,
                 is_binary,
                 hunks,
+                semantic_hunks: Vec::new(),
             });
         }
 
@@ -205,6 +216,11 @@ impl GitService {
         let repo = Repository::open(&request.repository_path)?;
         if repo.is_bare() {
             return Err(GitServiceError::BareRepository {
+                path: request.repository_path.clone(),
+            });
+        }
+        if repository_has_no_commits(&repo) {
+            return Err(GitServiceError::EmptyRepository {
                 path: request.repository_path.clone(),
             });
         }
@@ -303,6 +319,19 @@ impl GitService {
             },
         })
     }
+
+    pub fn validate_repository(&self, repository_path: &Path) -> Result<()> {
+        ensure_repo_exists(repository_path)?;
+
+        let repo = Repository::open(repository_path)?;
+        if repo.is_bare() {
+            return Err(GitServiceError::BareRepository {
+                path: repository_path.to_path_buf(),
+            });
+        }
+
+        Ok(())
+    }
 }
 
 enum ResolvedDiffTarget<'repo> {
@@ -338,6 +367,17 @@ fn ensure_branch(
         }
         Err(error) => Err(error.into()),
     }
+}
+
+fn repository_has_no_commits(repo: &Repository) -> bool {
+    match repo.head() {
+        Ok(head) => head.peel_to_commit().is_err(),
+        Err(error) => is_missing_head_error(&error),
+    }
+}
+
+fn is_missing_head_error(error: &git2::Error) -> bool {
+    matches!(error.code(), git2::ErrorCode::NotFound | git2::ErrorCode::UnbornBranch)
 }
 
 fn resolve_commit<'repo>(repo: &'repo Repository, reference: &str) -> Result<Commit<'repo>> {

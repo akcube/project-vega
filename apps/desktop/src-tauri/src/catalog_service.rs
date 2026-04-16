@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::Utc;
-use vega_git::{CommitHistoryRequest, CreateWorktreeRequest, GitService};
+use vega_git::{CreateWorktreeRequest, GitService};
 
 use crate::domain::{
     AddProjectResourceInput, CreateProjectInput, CreateTaskInput, Project, ProjectResource,
@@ -13,9 +13,7 @@ use crate::domain::{
 use crate::session::SessionManager;
 use crate::store::Store;
 use crate::terminal_service::TerminalService;
-use crate::view_model::{
-    ProjectBoardViewModel, TaskBoardCardViewModel, TaskBoardColumnViewModel,
-};
+use crate::view_model::{ProjectBoardViewModel, TaskBoardCardViewModel, TaskBoardColumnViewModel};
 
 #[derive(Clone)]
 pub struct CatalogService {
@@ -82,7 +80,10 @@ impl CatalogService {
         self.store.list_projects()
     }
 
-    pub fn add_project_resource(&self, mut input: AddProjectResourceInput) -> Result<ProjectResource> {
+    pub fn add_project_resource(
+        &self,
+        mut input: AddProjectResourceInput,
+    ) -> Result<ProjectResource> {
         input.label = input.label.trim().to_string();
         input.locator = input.locator.trim().to_string();
 
@@ -166,7 +167,8 @@ impl CatalogService {
             return Err(anyhow!("project has no repositories"));
         }
 
-        let source_repo = resolve_source_repo(&repositories, input.source_repo_resource_id.as_deref())?;
+        let source_repo =
+            resolve_source_repo(&repositories, input.source_repo_resource_id.as_deref())?;
         let task_id = uuid::Uuid::new_v4().to_string();
         let task_slug = slugify(&input.title);
         let short_id = &task_id[..8];
@@ -174,28 +176,46 @@ impl CatalogService {
         let branch_name = format!("vega/{task_slug}-{short_id}");
         let repository_path = PathBuf::from(&source_repo.locator);
         let worktree_path = derive_worktree_path(&repository_path, &worktree_name);
+        let materialize_worktree = input.materialize_worktree;
+        let title = input.title.trim().to_string();
+        let model = input.model.trim().to_string();
 
-        let handle = GitService::new().create_worktree(CreateWorktreeRequest {
-            repository_path,
-            worktree_path,
-            worktree_name: worktree_name.clone(),
-            branch_name: branch_name.clone(),
-            start_point: None,
-            reuse_existing_branch: false,
-        })?;
+        let (resolved_worktree_path, resolved_worktree_name, resolved_branch_name) =
+            if materialize_worktree {
+                let handle = GitService::new().create_worktree(CreateWorktreeRequest {
+                    repository_path,
+                    worktree_path,
+                    worktree_name: worktree_name.clone(),
+                    branch_name: branch_name.clone(),
+                    start_point: None,
+                    reuse_existing_branch: false,
+                })?;
+
+                (
+                    handle.worktree_path.display().to_string(),
+                    handle.worktree_name,
+                    handle.branch_name,
+                )
+            } else {
+                (
+                    worktree_path.display().to_string(),
+                    worktree_name,
+                    branch_name,
+                )
+            };
 
         let timestamp = Utc::now().to_rfc3339();
         let task = Task {
             id: task_id,
             project_id: project.id,
-            title: input.title.trim().to_string(),
+            title,
             workflow_state: WorkflowState::Todo,
             source_repo_resource_id: Some(source_repo.id),
-            worktree_path: handle.worktree_path.display().to_string(),
-            worktree_name: handle.worktree_name,
-            branch_name: handle.branch_name,
+            worktree_path: resolved_worktree_path,
+            worktree_name: resolved_worktree_name,
+            branch_name: resolved_branch_name,
             provider: input.provider,
-            model: input.model.trim().to_string(),
+            model,
             permission_policy: "default".to_string(),
             mcp_subset: Vec::new(),
             skill_subset: Vec::new(),
@@ -213,7 +233,8 @@ impl CatalogService {
         task_id: &str,
         workflow_state: WorkflowState,
     ) -> Result<()> {
-        self.store.update_task_workflow_state(task_id, workflow_state)
+        self.store
+            .update_task_workflow_state(task_id, workflow_state)
     }
 
     pub async fn delete_task(&self, task_id: &str) -> Result<()> {
@@ -243,10 +264,7 @@ impl CatalogService {
 fn normalize_repository_path(locator: &str) -> Result<String> {
     let path = std::fs::canonicalize(locator)
         .map_err(|error| anyhow!("resolve repository path {locator}: {error}"))?;
-    GitService::new().commit_history(CommitHistoryRequest {
-        repository_path: path.clone(),
-        max_count: 1,
-    })?;
+    GitService::new().validate_repository(&path)?;
     Ok(path.display().to_string())
 }
 
@@ -315,7 +333,7 @@ mod tests {
     use std::process::Command;
     use std::sync::Arc;
 
-    use tempfile::{tempdir, TempDir};
+    use tempfile::{TempDir, tempdir};
 
     use super::*;
     use crate::domain::{CreateProjectResourceInput, Provider};
@@ -323,7 +341,13 @@ mod tests {
     fn init_repo(path: &Path) {
         Command::new("git").arg("init").arg(path).output().unwrap();
         Command::new("git")
-            .args(["-C", path.to_str().unwrap(), "config", "user.email", "vega@example.com"])
+            .args([
+                "-C",
+                path.to_str().unwrap(),
+                "config",
+                "user.email",
+                "vega@example.com",
+            ])
             .output()
             .unwrap();
         Command::new("git")

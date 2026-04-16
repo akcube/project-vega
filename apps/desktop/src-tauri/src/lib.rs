@@ -5,11 +5,14 @@ mod events;
 mod feed;
 mod git_commands;
 mod monitor;
+mod project_planner;
 mod projection;
+mod semantic_diff;
 mod session;
 mod store;
 mod terminal_service;
 mod view_model;
+mod worktree_inspector;
 mod workspace_service;
 
 use std::sync::Arc;
@@ -51,6 +54,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::create_project,
+            commands::suggest_project_plan,
+            commands::suggest_project_tasks,
             commands::list_projects,
             commands::get_project_board,
             commands::add_project_resource,
@@ -62,6 +67,9 @@ pub fn run() {
             commands::open_workspace,
             commands::set_workspace_view,
             commands::close_workspace,
+            commands::inspect_worktree,
+            commands::read_worktree_file,
+            commands::save_worktree_file,
             commands::attach_terminal,
             commands::write_terminal,
             commands::resize_terminal,
