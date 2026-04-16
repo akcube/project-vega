@@ -4,6 +4,8 @@ use vega_git::{
     CommitReplayRequest, CommitReplayResult, CreateWorktreeRequest, GitService, WorktreeHandle,
 };
 
+use crate::semantic_diff::annotate_commit_replay;
+
 #[tauri::command]
 pub async fn load_commit_history(
     request: CommitHistoryRequest,
@@ -20,7 +22,8 @@ pub async fn load_commit_diff(request: CommitDiffRequest) -> Result<CommitDiffRe
 pub async fn load_commit_replay(
     request: CommitReplayRequest,
 ) -> Result<CommitReplayResult, String> {
-    run_git_job(move |git| git.commit_replay(request)).await
+    let replay = run_git_job(move |git| git.commit_replay(request)).await?;
+    Ok(annotate_commit_replay(replay).await)
 }
 
 #[tauri::command]

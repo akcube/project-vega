@@ -174,6 +174,7 @@ impl GitService {
                 new_content,
                 is_binary,
                 hunks,
+                semantic_hunks: Vec::new(),
             });
         }
 

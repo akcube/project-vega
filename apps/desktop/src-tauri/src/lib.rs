@@ -4,6 +4,7 @@ mod domain;
 mod events;
 mod git_commands;
 mod projection;
+mod semantic_diff;
 mod session;
 mod store;
 mod terminal_service;

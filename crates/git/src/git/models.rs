@@ -143,6 +143,8 @@ pub struct CommitReplayFile {
     pub new_content: String,
     pub is_binary: bool,
     pub hunks: Vec<CommitReplayHunk>,
+    #[serde(default)]
+    pub semantic_hunks: Vec<SemanticHunk>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +165,33 @@ pub struct CommitReplayLine {
     pub content: String,
     pub old_lineno: Option<u32>,
     pub new_lineno: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SemanticHunk {
+    pub id: String,
+    pub title: String,
+    pub summary: Option<String>,
+    pub rationale: Option<String>,
+    #[serde(default)]
+    pub review_notes: Vec<String>,
+    pub confidence: Option<f64>,
+    pub kind: SemanticHunkKind,
+    #[serde(default)]
+    pub raw_hunk_indexes: Vec<usize>,
+    pub old_start: Option<u32>,
+    pub old_end: Option<u32>,
+    pub new_start: Option<u32>,
+    pub new_end: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SemanticHunkKind {
+    Annotated,
+    Trivial,
+    Unavailable,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
